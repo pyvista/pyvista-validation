@@ -10,8 +10,6 @@ from typing import get_origin
 
 import numpy as np
 import pytest
-import scipy
-
 from input_validation import check_contains
 from input_validation import check_finite
 from input_validation import check_greater_than
@@ -51,9 +49,24 @@ from input_validation.check import _validate_shape_value
 from input_validation.validate import _array_from_vtkmatrix
 from input_validation.validate import _set_default_kwarg_mandatory
 
-from vtkmodules.vtkCommonMath import vtkMatrix3x3
-from vtkmodules.vtkCommonMath import vtkMatrix4x4
-from vtkmodules.vtkCommonTransforms import vtkTransform
+try:
+    from vtkmodules.vtkCommonMath import vtkMatrix3x3
+    from vtkmodules.vtkCommonMath import vtkMatrix4x4
+    from vtkmodules.vtkCommonTransforms import vtkTransform
+except ModuleNotFoundError:
+    HAS_VTK = False
+else:
+    HAS_VTK = True
+
+try:
+    from scipy.spatial.transform import Rotation
+except ModuleNotFoundError:
+    HAS_SCIPY = False
+else:
+    HAS_SCIPY = True
+
+needs_vtk = pytest.mark.skipif(not HAS_VTK, reason='VTK is not installed.')
+needs_scipy = pytest.mark.skipif(not HAS_SCIPY, reason='SciPy is not installed.')
 
 NUMPY_VERSION_INFO = tuple(int(part) for part in np.__version__.split('.')[:2])
 
@@ -79,17 +92,18 @@ def vtkmatrix_from_array(array):
 @pytest.mark.parametrize(
     'transform_like',
     [
-        np.eye(3),
-        np.eye(4),
-        np.eye(3).tolist(),
-        np.eye(4).tolist(),
-        vtkmatrix_from_array(np.eye(3)),
-        vtkmatrix_from_array(np.eye(4)),
-        vtkTransform(),
+        lambda: np.eye(3),
+        lambda: np.eye(4),
+        lambda: np.eye(3).tolist(),
+        lambda: np.eye(4).tolist(),
+        pytest.param(lambda: vtkmatrix_from_array(np.eye(3)), marks=needs_vtk),
+        pytest.param(lambda: vtkmatrix_from_array(np.eye(4)), marks=needs_vtk),
+        pytest.param(vtkTransform if HAS_VTK else None, marks=needs_vtk),
     ],
+    ids=['array3x3', 'array4x4', 'list3x3', 'list4x4', 'vtk3x3', 'vtk4x4', 'vtktransform'],
 )
 def test_validate_transform4x4(transform_like):
-    result = validate_transform4x4(transform_like)
+    result = validate_transform4x4(transform_like())
     assert type(result) is np.ndarray
     assert np.array_equal(result, np.eye(4))
 
@@ -104,15 +118,15 @@ def test_validate_transform4x4_raises():
 @pytest.mark.parametrize(
     'transform_like',
     [
-        np.eye(3),
-        np.eye(3).tolist(),
-        vtkmatrix_from_array(np.eye(3)),
-        scipy.spatial.transform.Rotation.from_matrix(np.eye(3)),
+        lambda: np.eye(3),
+        lambda: np.eye(3).tolist(),
+        pytest.param(lambda: vtkmatrix_from_array(np.eye(3)), marks=needs_vtk),
+        pytest.param(lambda: Rotation.from_matrix(np.eye(3)), marks=needs_scipy),
     ],
     ids=['numpy', 'list', 'vtk', 'scipy'],
 )
 def test_validate_transform3x3(transform_like):
-    result = validate_transform3x3(transform_like)
+    result = validate_transform3x3(transform_like())
     assert type(result) is np.ndarray
     assert np.array_equal(result, np.eye(3))
 
@@ -1104,16 +1118,11 @@ def test_cast_to_list():
     assert np.array_equal(array_in, array_list)
 
 
-@pytest.mark.parametrize(
-    ('cls', 'shape'),
-    [
-        (vtkMatrix3x3, (3, 3)),
-        (vtkMatrix4x4, (4, 4)),
-    ],
-)
-def test_array_from_vtkmatrix(cls, shape):
+@needs_vtk
+@pytest.mark.parametrize('shape', [(3, 3), (4, 4)])
+def test_array_from_vtkmatrix(shape):
     expected = np.random.default_rng().random(shape)
-    mat = cls()
+    mat = vtkMatrix3x3() if shape == (3, 3) else vtkMatrix4x4()
     for i, j in itertools.product(range(shape[0]), range(shape[1])):
         mat.SetElement(i, j, expected[i, j])
     actual = _array_from_vtkmatrix(mat, shape=shape)
