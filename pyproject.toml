@@ -1,0 +1,114 @@
+[build-system]
+build-backend = 'setuptools.build_meta'
+requires = ['setuptools>=64', 'setuptools_scm>=8']
+
+[dependency-groups]
+dev = ['pre-commit', 'pytest', 'pytest-cov']
+
+[project]
+authors = [{ name = 'The PyVista Developers', email = 'info@pyvista.org' }]
+classifiers = [
+  'Development Status :: 4 - Beta',
+  'Intended Audience :: Developers',
+  'Intended Audience :: Science/Research',
+  'Operating System :: MacOS',
+  'Operating System :: Microsoft :: Windows',
+  'Operating System :: POSIX :: Linux',
+  'Programming Language :: Python :: 3',
+  'Programming Language :: Python :: 3.10',
+  'Programming Language :: Python :: 3.11',
+  'Programming Language :: Python :: 3.12',
+  'Programming Language :: Python :: 3.13',
+  'Programming Language :: Python :: 3.14',
+  'Topic :: Scientific/Engineering',
+  'Topic :: Software Development :: Libraries :: Python Modules',
+  'Typing :: Typed',
+]
+dependencies = ['numpy>=1.21.0']
+description = 'Validate and standardize array-like input.'
+dynamic = ['version']
+keywords = ['array', 'numpy', 'validation']
+license = 'MIT'
+name = 'input-validation'
+readme = 'README.md'
+requires-python = '>=3.10'
+
+[project.optional-dependencies]
+# `vtk` and `scipy` are only needed to validate their respective object types;
+# `all` is the catch-all for everything on top of numpy.
+all = ['input-validation[scipy,vtk]']
+scipy = ['scipy']
+vtk = ['vtk']
+
+[project.urls]
+Homepage = 'https://github.com/pyvista/input-validation'
+
+[tool.coverage.run]
+branch = true
+omit = ['*/_version.py']
+parallel = true
+source = ['input_validation']
+
+[tool.pytest.ini_options]
+addopts = '--cov=input_validation --cov-fail-under=95'
+testpaths = 'tests'
+
+[tool.ruff]
+indent-width = 4
+line-length = 99
+
+[tool.ruff.format]
+docstring-code-format = true
+# From https://numpydoc.readthedocs.io/en/latest/format.html
+# The length of docstring lines should be kept to 75 characters to facilitate
+# reading the docstrings in text terminals.
+docstring-code-line-length = 75
+quote-style = 'single'
+
+[tool.ruff.lint]
+extend-select = [
+  'A',
+  'B',
+  'C4',
+  'D',
+  'E',
+  'EM',
+  'F',
+  'FA',
+  'I',
+  'ICN',
+  'N',
+  'PERF',
+  'PGH',
+  'PIE',
+  'PT',
+  'RET',
+  'RSE',
+  'RUF',
+  'SIM',
+  'T10',
+  'T20',
+  'TCH',
+  'TID',
+  'UP',
+  'W',
+  'YTT',
+]
+ignore = ['D203', 'D211', 'D213']
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-single-line = true
+force-sort-within-sections = true
+required-imports = ['from __future__ import annotations']
+
+[tool.ruff.lint.pyupgrade]
+keep-runtime-typing = true
+
+[tool.setuptools]
+license-files = ['LICENSE']
+packages = ['input_validation', 'input_validation._typing']
+
+[tool.setuptools_scm]
+version_scheme = 'release-branch-semver'
+write_to = 'input_validation/_version.py'

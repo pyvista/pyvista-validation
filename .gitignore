@@ -1,0 +1,9 @@
+.DS_Store
+.coverage
+.coverage.*
+.idea/
+.venv/
+*.egg-info/
+__pycache__/
+input_validation/_version.py
+uv.lock
