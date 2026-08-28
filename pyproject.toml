@@ -96,6 +96,13 @@ extend-select = [
 ]
 ignore = ['D203', 'D211', 'D213']
 
+[tool.ruff.lint.per-file-ignores]
+# These are runtime type aliases, not annotations. `Union` is required because
+# `X | Y` builds a `types.UnionType`, which cannot be subscripted to substitute
+# a TypeVar on Python 3.10.
+'input_validation/_typing/*' = ['UP007']
+'tests/*' = ['D103']
+
 [tool.ruff.lint.isort]
 combine-as-imports = true
 force-single-line = true
