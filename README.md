@@ -86,9 +86,13 @@ array([1., 2., 3.])
 
 ```python
 >>> iv.check_range([1, 5], rng=[0, 3])
+Traceback (most recent call last):
+    ...
 ValueError: Array values must all be less than or equal to 3.
 
 >>> iv.check_subdtype(np.array([1.0]), np.integer)
+Traceback (most recent call last):
+    ...
 TypeError: Input has incorrect dtype of 'float64'. The dtype must be a subtype of <class 'numpy.integer'>.
 ```
 
@@ -96,6 +100,8 @@ Error messages name the offending value and the constraint it violated:
 
 ```python
 >>> iv.validate_array3([1, 2])
+Traceback (most recent call last):
+    ...
 ValueError: Array has shape (2,) which is not allowed. Shape must be one of [(3,), (1, 3), (3, 1)].
 ```
 
