@@ -45,7 +45,8 @@ Homepage = 'https://github.com/pyvista/input-validation'
 
 [tool.coverage.run]
 branch = true
-omit = ['*/_version.py']
+# _typing is imported only by type checkers, never at runtime.
+omit = ['*/_version.py', 'input_validation/_typing/*']
 parallel = true
 source = ['input_validation']
 

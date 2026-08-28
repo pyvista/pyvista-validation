@@ -1,3 +1,5 @@
+"""Tests for the input validation functions."""
+
 from __future__ import annotations
 
 import itertools
@@ -10,68 +12,101 @@ from typing import get_origin
 
 import numpy as np
 import pytest
-import scipy
 
-from pyvista import _vtk
-from pyvista.core import pyvista_ndarray
-from pyvista.core._validation import check_contains
-from pyvista.core._validation import check_finite
-from pyvista.core._validation import check_greater_than
-from pyvista.core._validation import check_instance
-from pyvista.core._validation import check_integer
-from pyvista.core._validation import check_iterable
-from pyvista.core._validation import check_iterable_items
-from pyvista.core._validation import check_length
-from pyvista.core._validation import check_less_than
-from pyvista.core._validation import check_ndim
-from pyvista.core._validation import check_nonnegative
-from pyvista.core._validation import check_number
-from pyvista.core._validation import check_range
-from pyvista.core._validation import check_real
-from pyvista.core._validation import check_sequence
-from pyvista.core._validation import check_shape
-from pyvista.core._validation import check_sorted
-from pyvista.core._validation import check_string
-from pyvista.core._validation import check_subdtype
-from pyvista.core._validation import check_type
-from pyvista.core._validation import validate_array
-from pyvista.core._validation import validate_array3
-from pyvista.core._validation import validate_arrayN
-from pyvista.core._validation import validate_arrayN_unsigned
-from pyvista.core._validation import validate_arrayNx3
-from pyvista.core._validation import validate_axes
-from pyvista.core._validation import validate_data_range
-from pyvista.core._validation import validate_dimensionality
-from pyvista.core._validation import validate_number
-from pyvista.core._validation import validate_rotation
-from pyvista.core._validation import validate_transform3x3
-from pyvista.core._validation import validate_transform4x4
-from pyvista.core._validation._cast_array import _cast_to_list
-from pyvista.core._validation._cast_array import _cast_to_numpy
-from pyvista.core._validation._cast_array import _cast_to_tuple
-from pyvista.core._validation.check import _validate_shape_value
-from pyvista.core._validation.validate import _array_from_vtkmatrix
-from pyvista.core._validation.validate import _set_default_kwarg_mandatory
-from pyvista.core._validation.validate import _validate_color_sequence
-from pyvista.core.utilities.arrays import array_from_vtkmatrix
-from pyvista.core.utilities.arrays import vtkmatrix_from_array
-from tests.conftest import NUMPY_VERSION_INFO
+from input_validation import _lazy_import
+from input_validation import check_contains
+from input_validation import check_finite
+from input_validation import check_greater_than
+from input_validation import check_instance
+from input_validation import check_integer
+from input_validation import check_iterable
+from input_validation import check_iterable_items
+from input_validation import check_length
+from input_validation import check_less_than
+from input_validation import check_ndim
+from input_validation import check_nonnegative
+from input_validation import check_number
+from input_validation import check_range
+from input_validation import check_real
+from input_validation import check_sequence
+from input_validation import check_shape
+from input_validation import check_sorted
+from input_validation import check_string
+from input_validation import check_subdtype
+from input_validation import check_type
+from input_validation import validate_array
+from input_validation import validate_array3
+from input_validation import validate_arrayN
+from input_validation import validate_arrayN_unsigned
+from input_validation import validate_arrayNx3
+from input_validation import validate_axes
+from input_validation import validate_data_range
+from input_validation import validate_dimensionality
+from input_validation import validate_number
+from input_validation import validate_rotation
+from input_validation import validate_transform3x3
+from input_validation import validate_transform4x4
+from input_validation._cast_array import _cast_to_list
+from input_validation._cast_array import _cast_to_numpy
+from input_validation._cast_array import _cast_to_tuple
+from input_validation.check import _validate_shape_value
+from input_validation.validate import _array_from_vtkmatrix
+from input_validation.validate import _set_default_kwarg_mandatory
+
+try:
+    from vtkmodules.vtkCommonMath import vtkMatrix3x3
+    from vtkmodules.vtkCommonMath import vtkMatrix4x4
+    from vtkmodules.vtkCommonTransforms import vtkTransform
+except ModuleNotFoundError:
+    HAS_VTK = False
+else:
+    HAS_VTK = True
+
+try:
+    from scipy.spatial.transform import Rotation
+except ModuleNotFoundError:
+    HAS_SCIPY = False
+else:
+    HAS_SCIPY = True
+
+needs_vtk = pytest.mark.skipif(not HAS_VTK, reason='VTK is not installed.')
+needs_scipy = pytest.mark.skipif(not HAS_SCIPY, reason='SciPy is not installed.')
+
+NUMPY_VERSION_INFO = tuple(int(part) for part in np.__version__.split('.')[:2])
+
+
+class NdarraySubclass(np.ndarray):
+    """Minimal ndarray subclass, standing in for PyVista's pyvista_ndarray."""
+
+    def __new__(cls, array):
+        """Create the subclass from any array-like input."""
+        return np.asarray(array).view(cls)
+
+
+def vtkmatrix_from_array(array):
+    """Convert a 3x3 or 4x4 array into the matching VTK matrix."""
+    array = np.asarray(array)
+    matrix = vtkMatrix3x3() if array.shape == (3, 3) else vtkMatrix4x4()
+    for i, j in itertools.product(range(array.shape[0]), range(array.shape[1])):
+        matrix.SetElement(i, j, array[i, j])
+    return matrix
 
 
 @pytest.mark.parametrize(
     'transform_like',
     [
-        np.eye(3),
-        np.eye(4),
-        np.eye(3).tolist(),
-        np.eye(4).tolist(),
-        vtkmatrix_from_array(np.eye(3)),
-        vtkmatrix_from_array(np.eye(4)),
-        _vtk.vtkTransform(),
+        lambda: np.eye(3),
+        lambda: np.eye(4),
+        lambda: np.eye(3).tolist(),
+        lambda: np.eye(4).tolist(),
+        pytest.param(lambda: vtkmatrix_from_array(np.eye(3)), marks=needs_vtk),
+        pytest.param(lambda: vtkmatrix_from_array(np.eye(4)), marks=needs_vtk),
+        pytest.param(vtkTransform if HAS_VTK else None, marks=needs_vtk),
     ],
+    ids=['array3x3', 'array4x4', 'list3x3', 'list4x4', 'vtk3x3', 'vtk4x4', 'vtktransform'],
 )
 def test_validate_transform4x4(transform_like):
-    result = validate_transform4x4(transform_like)
+    result = validate_transform4x4(transform_like())
     assert type(result) is np.ndarray
     assert np.array_equal(result, np.eye(4))
 
@@ -86,15 +121,15 @@ def test_validate_transform4x4_raises():
 @pytest.mark.parametrize(
     'transform_like',
     [
-        np.eye(3),
-        np.eye(3).tolist(),
-        vtkmatrix_from_array(np.eye(3)),
-        scipy.spatial.transform.Rotation.from_matrix(np.eye(3)),
+        lambda: np.eye(3),
+        lambda: np.eye(3).tolist(),
+        pytest.param(lambda: vtkmatrix_from_array(np.eye(3)), marks=needs_vtk),
+        pytest.param(lambda: Rotation.from_matrix(np.eye(3)), marks=needs_scipy),
     ],
     ids=['numpy', 'list', 'vtk', 'scipy'],
 )
 def test_validate_transform3x3(transform_like):
-    result = validate_transform3x3(transform_like)
+    result = validate_transform3x3(transform_like())
     assert type(result) is np.ndarray
     assert np.array_equal(result, np.eye(3))
 
@@ -417,6 +452,8 @@ def test_check_range():
 
 
 class Case(NamedTuple):
+    """A validate_array test case and the error its invalid array must raise."""
+
     kwarg: dict
     valid_array: np.ndarray
     invalid_array: np.ndarray
@@ -427,26 +464,26 @@ class Case(NamedTuple):
 def numeric_array_test_cases():
     return (
         Case(
-            dict(
-                must_be_finite=True,
-                must_be_real=False,
-            ),  # must be real is only added for extra coverage
+            {
+                'must_be_finite': True,
+                'must_be_real': False,
+            },  # must be real is only added for extra coverage
             0,
             np.inf,
             ValueError,
             'must have finite values',
         ),
-        Case(dict(must_be_real=True), 0, 1 + 1j, TypeError, 'must have real numbers'),
+        Case({'must_be_real': True}, 0, 1 + 1j, TypeError, 'must have real numbers'),
         Case(
-            dict(must_be_integer=True),
+            {'must_be_integer': True},
             0.0,
             0.1,
             ValueError,
             'must have integer-like values',
         ),
-        Case(dict(must_be_sorted=True), [0, 1], [1, 0], ValueError, 'must be sorted'),
+        Case({'must_be_sorted': True}, [0, 1], [1, 0], ValueError, 'must be sorted'),
         Case(
-            dict(must_be_sorted=dict(ascending=True, strict=False, axis=-1)),
+            {'must_be_sorted': {'ascending': True, 'strict': False, 'axis': -1}},
             [0, 1],
             [1, 0],
             ValueError,
@@ -463,7 +500,7 @@ def numeric_array_test_cases():
 @pytest.mark.parametrize('dtype_out', [np.float32, np.float64])
 @pytest.mark.parametrize('case', numeric_array_test_cases())
 @pytest.mark.parametrize('stack_input', [True, False])
-@pytest.mark.parametrize('input_type', [tuple, list, np.ndarray, pyvista_ndarray])
+@pytest.mark.parametrize('input_type', [tuple, list, np.ndarray, NdarraySubclass])
 def test_validate_array(
     name,
     copy,
@@ -496,9 +533,9 @@ def test_validate_array(
     elif input_type is np.ndarray:
         valid_array = np.asarray(valid_array)
         invalid_array = np.asarray(invalid_array)
-    else:  # pyvista_ndarray:
-        valid_array = pyvista_ndarray(valid_array)
-        invalid_array = pyvista_ndarray(invalid_array)
+    else:  # NdarraySubclass:
+        valid_array = NdarraySubclass(valid_array)
+        invalid_array = NdarraySubclass(invalid_array)
 
     shape = np.array(valid_array).shape
     common_kwargs = dict(
@@ -545,8 +582,8 @@ def test_validate_array(
         assert isinstance(array_out, np.ndarray)
         assert array_out.dtype.type is dtype_out
         if as_any:
-            if input_type is pyvista_ndarray:
-                assert type(array_out) is pyvista_ndarray
+            if input_type is NdarraySubclass:
+                assert type(array_out) is NdarraySubclass
             elif input_type is np.ndarray:
                 assert type(array_out) is np.ndarray
             if (
@@ -978,32 +1015,32 @@ def test_validate_axes_orthogonal(bias_index):
 
 
 def test_validate_rotation():
-    I3 = np.eye(3)
-    validated = validate_rotation(I3)
-    assert np.array_equal(validated, I3)
-    validated = validate_rotation(I3, must_have_handedness='right')
-    assert np.array_equal(validated, I3)
+    identity3 = np.eye(3)
+    validated = validate_rotation(identity3)
+    assert np.array_equal(validated, identity3)
+    validated = validate_rotation(identity3, must_have_handedness='right')
+    assert np.array_equal(validated, identity3)
     match = (
         'Rotation has incorrect handedness. Expected a left-handed rotation, '
         'but got a right-handed rotation instead.'
     )
     with pytest.raises(ValueError, match=match):
-        validate_rotation(I3, must_have_handedness='left')
+        validate_rotation(identity3, must_have_handedness='left')
 
-    validated = validate_rotation(-I3)
-    assert np.array_equal(validated, -I3)
-    validated = validate_rotation(-I3, must_have_handedness='left')
-    assert np.array_equal(validated, -I3)
+    validated = validate_rotation(-identity3)
+    assert np.array_equal(validated, -identity3)
+    validated = validate_rotation(-identity3, must_have_handedness='left')
+    assert np.array_equal(validated, -identity3)
     match = (
         'Rotation has incorrect handedness. Expected a right-handed rotation, '
         'but got a left-handed rotation instead.'
     )
     with pytest.raises(ValueError, match=match):
-        validate_rotation(-I3, must_have_handedness='right')
+        validate_rotation(-identity3, must_have_handedness='right')
 
     match = 'Rotation is not valid. Rotation must be orthogonal.'
     with pytest.raises(ValueError, match=match):
-        validate_rotation(I3 * 2)
+        validate_rotation(identity3 * 2)
 
 
 def test_validate_rotation_tolerance():
@@ -1024,11 +1061,11 @@ def test_validate_rotation_tolerance():
 @pytest.mark.parametrize('copy', [True, False])
 @pytest.mark.parametrize('dtype', [None, float])
 def test_cast_to_numpy(as_any, copy, dtype):
-    array_in = pyvista_ndarray([1, 2])
+    array_in = NdarraySubclass([1, 2])
     array_out = _cast_to_numpy(array_in, copy=copy, as_any=as_any, dtype=dtype)
     assert np.array_equal(array_out, array_in)
     if as_any:
-        assert type(array_out) is pyvista_ndarray
+        assert type(array_out) is NdarraySubclass
     else:
         assert type(array_out) is np.ndarray
 
@@ -1086,23 +1123,14 @@ def test_cast_to_list():
     assert np.array_equal(array_in, array_list)
 
 
-@pytest.mark.parametrize(
-    ('cls', 'shape'),
-    [
-        (_vtk.vtkMatrix3x3, (3, 3)),
-        (_vtk.vtkMatrix4x4, (4, 4)),
-    ],
-)
-def test_array_from_vtkmatrix(cls, shape):
+@needs_vtk
+@pytest.mark.parametrize('shape', [(3, 3), (4, 4)])
+def test_array_from_vtkmatrix(shape):
     expected = np.random.default_rng().random(shape)
-    mat = cls()
+    mat = vtkMatrix3x3() if shape == (3, 3) else vtkMatrix4x4()
     for i, j in itertools.product(range(shape[0]), range(shape[1])):
         mat.SetElement(i, j, expected[i, j])
     actual = _array_from_vtkmatrix(mat, shape=shape)
-    assert np.array_equal(actual, expected)
-
-    # Test this matches public function
-    expected = array_from_vtkmatrix(mat)
     assert np.array_equal(actual, expected)
 
 
@@ -1148,19 +1176,36 @@ def test_validate_dimensionality_errors(dimensionality, message):
         validate_dimensionality(dimensionality)
 
 
-@pytest.mark.parametrize(
-    ('n_colors', 'match'),
-    [
-        (
-            None,
-            'Input must be a single ColorLike color or a sequence of ColorLike colors.',
-        ),
-        (
-            42,
-            'Input must be a single ColorLike color or a sequence of 42 ColorLike colors.',
-        ),
-    ],
-)
-def test_validate_color_sequence_raises(n_colors, match):
-    with pytest.raises(ValueError, match=match):
-        _validate_color_sequence('foo', n_colors=n_colors)
+def test_lazy_import_rejects_unknown_names():
+    with pytest.raises(AttributeError, match="has no attribute 'not_a_real_name'"):
+        _ = _lazy_import.not_a_real_name
+
+
+@needs_vtk
+def test_lazy_import_returns_the_real_vtk_classes():
+    assert _lazy_import.vtkMatrix3x3 is vtkMatrix3x3
+    assert _lazy_import.vtkMatrix4x4 is vtkMatrix4x4
+    assert _lazy_import.vtkTransform is vtkTransform
+
+
+@needs_scipy
+def test_lazy_import_returns_the_real_rotation():
+    assert _lazy_import.Rotation is Rotation
+
+
+def test_lazy_import_caches_in_module_globals():
+    """A resolved name is stored as a global so __getattr__ runs only once."""
+    _lazy_import.__dict__.pop('vtkMatrix3x3', None)
+    assert _lazy_import.vtkMatrix3x3 is not None
+    assert 'vtkMatrix3x3' in vars(_lazy_import)
+
+
+def test_lazy_import_placeholder_when_unavailable(monkeypatch):
+    """An unimportable name resolves to a placeholder with no instances."""
+    monkeypatch.setitem(_lazy_import._MODULES, 'Missing', 'a_package_that_is_not_installed')
+    try:
+        placeholder = _lazy_import.Missing
+        assert placeholder.__name__ == 'Missing'
+        assert not isinstance(np.eye(4), placeholder)
+    finally:
+        _lazy_import.__dict__.pop('Missing', None)
