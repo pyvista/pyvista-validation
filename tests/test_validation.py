@@ -47,6 +47,7 @@ from input_validation._cast_array import _cast_to_numpy
 from input_validation._cast_array import _cast_to_tuple
 from input_validation.check import _validate_shape_value
 from input_validation.validate import _array_from_vtkmatrix
+from input_validation import _lazy_import
 from input_validation.validate import _set_default_kwarg_mandatory
 
 try:
@@ -1169,3 +1170,38 @@ def test_validate_dimensionality(dimensionality, reshape, expected_dimensionalit
 def test_validate_dimensionality_errors(dimensionality, message):
     with pytest.raises(ValueError, match=re.escape(message)):
         validate_dimensionality(dimensionality)
+
+
+def test_lazy_import_rejects_unknown_names():
+    with pytest.raises(AttributeError, match="has no attribute 'not_a_real_name'"):
+        _ = _lazy_import.not_a_real_name
+
+
+@needs_vtk
+def test_lazy_import_returns_the_real_vtk_classes():
+    assert _lazy_import.vtkMatrix3x3 is vtkMatrix3x3
+    assert _lazy_import.vtkMatrix4x4 is vtkMatrix4x4
+    assert _lazy_import.vtkTransform is vtkTransform
+
+
+@needs_scipy
+def test_lazy_import_returns_the_real_rotation():
+    assert _lazy_import.Rotation is Rotation
+
+
+def test_lazy_import_caches_in_module_globals():
+    """A resolved name is stored as a global so __getattr__ runs only once."""
+    _lazy_import.__dict__.pop('vtkMatrix3x3', None)
+    assert _lazy_import.vtkMatrix3x3 is not None
+    assert 'vtkMatrix3x3' in vars(_lazy_import)
+
+
+def test_lazy_import_placeholder_when_unavailable(monkeypatch):
+    """An unimportable name resolves to a placeholder with no instances."""
+    monkeypatch.setitem(_lazy_import._MODULES, 'Missing', 'a_package_that_is_not_installed')
+    try:
+        placeholder = _lazy_import.Missing
+        assert placeholder.__name__ == 'Missing'
+        assert not isinstance(np.eye(4), placeholder)
+    finally:
+        _lazy_import.__dict__.pop('Missing', None)
