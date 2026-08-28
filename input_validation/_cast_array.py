@@ -8,12 +8,12 @@ import numpy as np
 import numpy.typing as npt
 
 if TYPE_CHECKING:
-    from pyvista.core._typing_core import ArrayLike
-    from pyvista.core._typing_core import NumberType
-    from pyvista.core._typing_core import NumpyArray
-    from pyvista.core._typing_core import _ArrayLikeOrScalar
-    from pyvista.core._typing_core import _FiniteNestedList
-    from pyvista.core._typing_core import _FiniteNestedTuple
+    from input_validation._typing import ArrayLike
+    from input_validation._typing import NumberType
+    from input_validation._typing import NumpyArray
+    from input_validation._typing import _ArrayLikeOrScalar
+    from input_validation._typing import _FiniteNestedList
+    from input_validation._typing import _FiniteNestedTuple
 
 
 def _cast_to_list(
@@ -128,7 +128,7 @@ def _cast_to_numpy(
     if must_be_real and not issubclass(out.dtype.type, (np.floating, np.integer)):
         msg = f'Array must have real numbers. Got dtype {out.dtype.type}'
         raise TypeError(msg)
-    elif out.dtype.name == 'object':
+    if out.dtype.name == 'object':
         msg = f'Object arrays are not supported. Got {arr} when casting to a NumPy array.'
         raise TypeError(msg)
     return out
