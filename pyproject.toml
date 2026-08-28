@@ -116,6 +116,9 @@ keep-runtime-typing = true
 license-files = ['LICENSE']
 packages = ['input_validation', 'input_validation._typing']
 
+[tool.setuptools.package-data]
+input_validation = ['py.typed']
+
 [tool.setuptools_scm]
 version_scheme = 'release-branch-semver'
 write_to = 'input_validation/_version.py'
