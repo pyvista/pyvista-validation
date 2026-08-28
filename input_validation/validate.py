@@ -1057,7 +1057,9 @@ def validate_arrayN_unsigned(  # noqa: N802
 
     Add additional constraints if needed.
 
-    >>> input_validation.validate_arrayN_unsigned((1, 2, 3), must_be_in_range=[1, 3])
+    >>> input_validation.validate_arrayN_unsigned(
+    ...     (1, 2, 3), must_be_in_range=[1, 3]
+    ... )
     array([1, 2, 3])
 
     """
@@ -1248,4 +1250,3 @@ def validate_dimensionality(
     _set_default_kwarg_mandatory(kwargs, 'must_have_shape', shape)
 
     return validate_array(dimensionality_as_array, **kwargs)
-
