@@ -25,6 +25,8 @@ from typing import Literal
 import numpy as np
 
 from input_validation import _lazy_import
+from input_validation._cast_array import _cast_to_numpy
+from input_validation._cast_array import _cast_to_tuple
 from input_validation.check import check_contains
 from input_validation.check import check_finite
 from input_validation.check import check_integer
@@ -37,8 +39,6 @@ from input_validation.check import check_shape
 from input_validation.check import check_sorted
 from input_validation.check import check_string
 from input_validation.check import check_subdtype
-from input_validation._cast_array import _cast_to_numpy
-from input_validation._cast_array import _cast_to_tuple
 
 if TYPE_CHECKING:
     import numpy.typing as npt
@@ -569,7 +569,7 @@ def validate_rotation(
                 f'left-handed rotation instead.'
             )
             raise ValueError(msg)
-        elif must_have_handedness == 'left' and not det < 0:
+        if must_have_handedness == 'left' and not det < 0:
             msg = (
                 f'{name} has incorrect handedness. Expected a left-handed rotation, but got a '
                 f'right-handed rotation instead.'
@@ -644,7 +644,7 @@ def validate_transform4x4(
                         f'Got {reprlib.repr(transform)} with type {type(transform)} instead.'
                     ),
                 )
-                raise TypeError(msg)
+                raise TypeError(msg) from None
 
     return arr
 
@@ -692,27 +692,26 @@ def validate_transform3x3(
     check_string(name, name='Name')
     if isinstance(transform, _lazy_import.vtkMatrix3x3):
         return _array_from_vtkmatrix(transform, shape=(3, 3))
-    else:
+    try:
+        return validate_array(
+            transform,  # type: ignore[arg-type]
+            must_have_shape=(3, 3),
+            must_be_finite=must_be_finite,
+            name=name,
+        )
+    except ValueError:
+        pass
+    except TypeError:
         try:
-            return validate_array(
-                transform,  # type: ignore[arg-type]
-                must_have_shape=(3, 3),
-                must_be_finite=must_be_finite,
-                name=name,
-            )
-        except ValueError:
+            from scipy.spatial.transform import Rotation
+        except ModuleNotFoundError:  # pragma: no cover
             pass
-        except TypeError:
-            try:
-                from scipy.spatial.transform import Rotation  # noqa: PLC0415
-            except ModuleNotFoundError:  # pragma: no cover
-                pass
-            else:
-                if isinstance(transform, Rotation):
-                    # Get matrix output and try validating again
-                    return validate_transform3x3(
-                        transform.as_matrix(), must_be_finite=must_be_finite, name=name
-                    )
+        else:
+            if isinstance(transform, Rotation):
+                # Get matrix output and try validating again
+                return validate_transform3x3(
+                    transform.as_matrix(), must_be_finite=must_be_finite, name=name
+                )
 
     error_message = (
         f'Input transform must be one of:\n'
@@ -1248,7 +1247,7 @@ def validate_dimensionality(
             f'`{dimensionality}` is not a valid dimensionality.'
             ' Use one of [0, 1, 2, 3, "0D", "1D", "2D", "3D"].'
         )
-        raise ValueError(msg)
+        raise ValueError(msg) from None
 
     if reshape:
         shape = [(), (1,)]

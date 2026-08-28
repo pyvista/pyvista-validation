@@ -239,7 +239,7 @@ def check_sorted(
             check_range(axis, rng=[-ndim, ndim - 1], name='Axis')
         except ValueError:
             msg = f'Axis {axis} is out of bounds for ndim {ndim}.'
-            raise ValueError(msg)
+            raise ValueError(msg) from None
 
     if axis is None and ndim >= 1:  # type: ignore[unreachable]
         # Emulate np.sort(), which flattens array when axis is None
@@ -452,7 +452,7 @@ def check_greater_than(
     if strict and not np.all(array > valid_value):
         msg = f'{name} values must all be greater than {value}.'
         raise ValueError(msg)
-    elif not np.all(array >= valid_value):
+    if not np.all(array >= valid_value):
         msg = f'{name} values must all be greater than or equal to {value}.'
         raise ValueError(msg)
 
@@ -508,7 +508,7 @@ def check_less_than(
     if strict and not np.all(array < valid_value):
         msg = f'{name} values must all be less than {value}.'
         raise ValueError(msg)
-    elif not np.all(array <= valid_value):
+    if not np.all(array <= valid_value):
         msg = f'{name} values must all be less than or equal to {value}.'
         raise ValueError(msg)
 
