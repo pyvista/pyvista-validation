@@ -12,8 +12,6 @@ import numpy as np
 import pytest
 import scipy
 
-from pyvista import _vtk
-from pyvista.core import pyvista_ndarray
 from input_validation import check_contains
 from input_validation import check_finite
 from input_validation import check_greater_than
@@ -52,9 +50,30 @@ from input_validation._cast_array import _cast_to_tuple
 from input_validation.check import _validate_shape_value
 from input_validation.validate import _array_from_vtkmatrix
 from input_validation.validate import _set_default_kwarg_mandatory
-from pyvista.core.utilities.arrays import array_from_vtkmatrix
-from pyvista.core.utilities.arrays import vtkmatrix_from_array
-from tests.conftest import NUMPY_VERSION_INFO
+
+from vtkmodules.vtkCommonMath import vtkMatrix3x3
+from vtkmodules.vtkCommonMath import vtkMatrix4x4
+from vtkmodules.vtkCommonTransforms import vtkTransform
+
+NUMPY_VERSION_INFO = tuple(int(part) for part in np.__version__.split('.')[:2])
+
+
+class NdarraySubclass(np.ndarray):
+    """Minimal ndarray subclass, standing in for PyVista's pyvista_ndarray."""
+
+    def __new__(cls, array):
+        """Create the subclass from any array-like input."""
+        return np.asarray(array).view(cls)
+
+
+def vtkmatrix_from_array(array):
+    """Convert a 3x3 or 4x4 array into the matching VTK matrix."""
+    array = np.asarray(array)
+    matrix = vtkMatrix3x3() if array.shape == (3, 3) else vtkMatrix4x4()
+    for i, j in itertools.product(range(array.shape[0]), range(array.shape[1])):
+        matrix.SetElement(i, j, array[i, j])
+    return matrix
+
 
 
 @pytest.mark.parametrize(
@@ -66,7 +85,7 @@ from tests.conftest import NUMPY_VERSION_INFO
         np.eye(4).tolist(),
         vtkmatrix_from_array(np.eye(3)),
         vtkmatrix_from_array(np.eye(4)),
-        _vtk.vtkTransform(),
+        vtkTransform(),
     ],
 )
 def test_validate_transform4x4(transform_like):
@@ -462,7 +481,7 @@ def numeric_array_test_cases():
 @pytest.mark.parametrize('dtype_out', [np.float32, np.float64])
 @pytest.mark.parametrize('case', numeric_array_test_cases())
 @pytest.mark.parametrize('stack_input', [True, False])
-@pytest.mark.parametrize('input_type', [tuple, list, np.ndarray, pyvista_ndarray])
+@pytest.mark.parametrize('input_type', [tuple, list, np.ndarray, NdarraySubclass])
 def test_validate_array(
     name,
     copy,
@@ -495,9 +514,9 @@ def test_validate_array(
     elif input_type is np.ndarray:
         valid_array = np.asarray(valid_array)
         invalid_array = np.asarray(invalid_array)
-    else:  # pyvista_ndarray:
-        valid_array = pyvista_ndarray(valid_array)
-        invalid_array = pyvista_ndarray(invalid_array)
+    else:  # NdarraySubclass:
+        valid_array = NdarraySubclass(valid_array)
+        invalid_array = NdarraySubclass(invalid_array)
 
     shape = np.array(valid_array).shape
     common_kwargs = dict(
@@ -544,8 +563,8 @@ def test_validate_array(
         assert isinstance(array_out, np.ndarray)
         assert array_out.dtype.type is dtype_out
         if as_any:
-            if input_type is pyvista_ndarray:
-                assert type(array_out) is pyvista_ndarray
+            if input_type is NdarraySubclass:
+                assert type(array_out) is NdarraySubclass
             elif input_type is np.ndarray:
                 assert type(array_out) is np.ndarray
             if (
@@ -1023,11 +1042,11 @@ def test_validate_rotation_tolerance():
 @pytest.mark.parametrize('copy', [True, False])
 @pytest.mark.parametrize('dtype', [None, float])
 def test_cast_to_numpy(as_any, copy, dtype):
-    array_in = pyvista_ndarray([1, 2])
+    array_in = NdarraySubclass([1, 2])
     array_out = _cast_to_numpy(array_in, copy=copy, as_any=as_any, dtype=dtype)
     assert np.array_equal(array_out, array_in)
     if as_any:
-        assert type(array_out) is pyvista_ndarray
+        assert type(array_out) is NdarraySubclass
     else:
         assert type(array_out) is np.ndarray
 
@@ -1088,8 +1107,8 @@ def test_cast_to_list():
 @pytest.mark.parametrize(
     ('cls', 'shape'),
     [
-        (_vtk.vtkMatrix3x3, (3, 3)),
-        (_vtk.vtkMatrix4x4, (4, 4)),
+        (vtkMatrix3x3, (3, 3)),
+        (vtkMatrix4x4, (4, 4)),
     ],
 )
 def test_array_from_vtkmatrix(cls, shape):
@@ -1098,10 +1117,6 @@ def test_array_from_vtkmatrix(cls, shape):
     for i, j in itertools.product(range(shape[0]), range(shape[1])):
         mat.SetElement(i, j, expected[i, j])
     actual = _array_from_vtkmatrix(mat, shape=shape)
-    assert np.array_equal(actual, expected)
-
-    # Test this matches public function
-    expected = array_from_vtkmatrix(mat)
     assert np.array_equal(actual, expected)
 
 
