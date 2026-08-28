@@ -1,3 +1,5 @@
+"""Tests for the input validation functions."""
+
 from __future__ import annotations
 
 import itertools
@@ -10,6 +12,8 @@ from typing import get_origin
 
 import numpy as np
 import pytest
+
+from input_validation import _lazy_import
 from input_validation import check_contains
 from input_validation import check_finite
 from input_validation import check_greater_than
@@ -47,7 +51,6 @@ from input_validation._cast_array import _cast_to_numpy
 from input_validation._cast_array import _cast_to_tuple
 from input_validation.check import _validate_shape_value
 from input_validation.validate import _array_from_vtkmatrix
-from input_validation import _lazy_import
 from input_validation.validate import _set_default_kwarg_mandatory
 
 try:
@@ -87,7 +90,6 @@ def vtkmatrix_from_array(array):
     for i, j in itertools.product(range(array.shape[0]), range(array.shape[1])):
         matrix.SetElement(i, j, array[i, j])
     return matrix
-
 
 
 @pytest.mark.parametrize(
@@ -450,6 +452,8 @@ def test_check_range():
 
 
 class Case(NamedTuple):
+    """A validate_array test case and the error its invalid array must raise."""
+
     kwarg: dict
     valid_array: np.ndarray
     invalid_array: np.ndarray
@@ -460,26 +464,26 @@ class Case(NamedTuple):
 def numeric_array_test_cases():
     return (
         Case(
-            dict(
-                must_be_finite=True,
-                must_be_real=False,
-            ),  # must be real is only added for extra coverage
+            {
+                'must_be_finite': True,
+                'must_be_real': False,
+            },  # must be real is only added for extra coverage
             0,
             np.inf,
             ValueError,
             'must have finite values',
         ),
-        Case(dict(must_be_real=True), 0, 1 + 1j, TypeError, 'must have real numbers'),
+        Case({'must_be_real': True}, 0, 1 + 1j, TypeError, 'must have real numbers'),
         Case(
-            dict(must_be_integer=True),
+            {'must_be_integer': True},
             0.0,
             0.1,
             ValueError,
             'must have integer-like values',
         ),
-        Case(dict(must_be_sorted=True), [0, 1], [1, 0], ValueError, 'must be sorted'),
+        Case({'must_be_sorted': True}, [0, 1], [1, 0], ValueError, 'must be sorted'),
         Case(
-            dict(must_be_sorted=dict(ascending=True, strict=False, axis=-1)),
+            {'must_be_sorted': {'ascending': True, 'strict': False, 'axis': -1}},
             [0, 1],
             [1, 0],
             ValueError,
@@ -1011,32 +1015,32 @@ def test_validate_axes_orthogonal(bias_index):
 
 
 def test_validate_rotation():
-    I3 = np.eye(3)
-    validated = validate_rotation(I3)
-    assert np.array_equal(validated, I3)
-    validated = validate_rotation(I3, must_have_handedness='right')
-    assert np.array_equal(validated, I3)
+    identity3 = np.eye(3)
+    validated = validate_rotation(identity3)
+    assert np.array_equal(validated, identity3)
+    validated = validate_rotation(identity3, must_have_handedness='right')
+    assert np.array_equal(validated, identity3)
     match = (
         'Rotation has incorrect handedness. Expected a left-handed rotation, '
         'but got a right-handed rotation instead.'
     )
     with pytest.raises(ValueError, match=match):
-        validate_rotation(I3, must_have_handedness='left')
+        validate_rotation(identity3, must_have_handedness='left')
 
-    validated = validate_rotation(-I3)
-    assert np.array_equal(validated, -I3)
-    validated = validate_rotation(-I3, must_have_handedness='left')
-    assert np.array_equal(validated, -I3)
+    validated = validate_rotation(-identity3)
+    assert np.array_equal(validated, -identity3)
+    validated = validate_rotation(-identity3, must_have_handedness='left')
+    assert np.array_equal(validated, -identity3)
     match = (
         'Rotation has incorrect handedness. Expected a right-handed rotation, '
         'but got a left-handed rotation instead.'
     )
     with pytest.raises(ValueError, match=match):
-        validate_rotation(-I3, must_have_handedness='right')
+        validate_rotation(-identity3, must_have_handedness='right')
 
     match = 'Rotation is not valid. Rotation must be orthogonal.'
     with pytest.raises(ValueError, match=match):
-        validate_rotation(I3 * 2)
+        validate_rotation(identity3 * 2)
 
 
 def test_validate_rotation_tolerance():
