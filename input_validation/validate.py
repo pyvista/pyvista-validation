@@ -4,7 +4,7 @@
 
 A ``validate`` function typically:
 
-* Uses :py:mod:`~pyvista.core._validation.check` functions to
+* Uses :py:mod:`~input_validation.check` functions to
   check the type and/or value of input arguments.
 * Applies (optional) constraints -- for example input or output must have a
   specific length, shape, type, data-type, etc.
@@ -114,7 +114,7 @@ def validate_array(
         tuples of tuples, tuples of lists and ``ndarrays``.
 
     must_have_shape : int | tuple[int, ...] | list[int, tuple[int, ...]], optional
-        :func:`Check <pyvista.core._validation.check.check_shape>`
+        :func:`Check <input_validation.check.check_shape>`
         if the array has a specific shape. Specify a single shape
         or a ``list`` of any allowable shapes. If an integer, the array must
         be 1-dimensional with that length. Use a value of ``-1`` for any
@@ -123,21 +123,21 @@ def validate_array(
         can have any shape (default).
 
     must_have_ndim : int | VectorLike[int], optional
-        :func:`Check <pyvista.core._validation.check.check_ndim>` if
+        :func:`Check <input_validation.check.check_ndim>` if
         the array has the specified number of dimensions. Specify a
         single dimension or a sequence of allowable dimensions. If a
         sequence, the array must have at least one of the specified
         number of dimensions.
 
     must_have_dtype : DTypeLike | list[DTypeLike, ...], optional
-        :func:`Check <pyvista.core._validation.check.check_subdtype>`
+        :func:`Check <input_validation.check.check_subdtype>`
         if the array's data-type has the given ``dtype``. Specify a
         :class:`np.dtype` object or dtype-like base class which the
         array's data must be a subtype of. If a ``list``, the array's data
         must be a subtype of at least one of the specified ``dtypes``.
 
     must_have_length : int | VectorLike[int], optional
-        :func:`Check <pyvista.core._validation.check.check_length>`
+        :func:`Check <input_validation.check.check_length>`
         if the array has the given length. If multiple values are given,
         the array's length must match one of the values.
 
@@ -150,34 +150,34 @@ def validate_array(
             consideration if applicable.
 
     must_have_min_length : int, optional
-        :func:`Check <pyvista.core._validation.check.check_length>`
+        :func:`Check <input_validation.check.check_length>`
         if the array's length is this value or greater.
 
     must_have_max_length : int, optional
-        :func:`Check <pyvista.core._validation.check.check_length>`
+        :func:`Check <input_validation.check.check_length>`
         if the array' length is this value or less.
 
     must_be_nonnegative : bool, default: False
-        :func:`Check <pyvista.core._validation.check.check_nonnegative>`
+        :func:`Check <input_validation.check.check_nonnegative>`
         if all elements of the array are nonnegative.
 
     must_be_finite : bool, default: False
-        :func:`Check <pyvista.core._validation.check.check_finite>`
+        :func:`Check <input_validation.check.check_finite>`
         if all elements of the array are finite, that is, not ``infinity``
         and not Not a Number (``NaN``).
 
     must_be_real : bool, default: True
-        :func:`Check <pyvista.core._validation.check.check_real>`
+        :func:`Check <input_validation.check.check_real>`
         if the array has real numbers, that is, its data type is integer or
         floating.
 
     must_be_integer : bool, default: False
-        :func:`Check <pyvista.core._validation.check.check_integer>`
+        :func:`Check <input_validation.check.check_integer>`
         if the array's values are integer-like (that is, that
         ``np.all(arr, np.floor(arr))``).
 
     must_be_sorted : bool | dict, default: False
-        :func:`Check <pyvista.core._validation.check.check_sorted>`
+        :func:`Check <input_validation.check.check_sorted>`
         if the array's values are sorted. If ``True``, the check is
         performed with default parameters:
 
@@ -190,7 +190,7 @@ def validate_array(
         will be passed to ``check_sorted``.
 
     must_be_in_range : VectorLike[float], optional
-        :func:`Check <pyvista.core._validation.check.check_range>`
+        :func:`Check <input_validation.check.check_range>`
         if the array's values are all within a specific range. Range
         must be array-like with two elements specifying the minimum and
         maximum data values allowed, respectively. By default, the range
@@ -274,10 +274,10 @@ def validate_array(
     monotonically increasing (that is, has strict ascending order), and
     is within some range.
 
-    >>> from pyvista import _validation
+    >>> import input_validation
     >>> array_in = (1, 2, 3, 5, 8, 13)
     >>> rng = (0, 20)
-    >>> _validation.validate_array(
+    >>> input_validation.validate_array(
     ...     array_in,
     ...     must_have_shape=(-1),
     ...     must_have_min_length=2,
@@ -405,22 +405,22 @@ def validate_axes(
     Validate an axes array.
 
     >>> import numpy as np
-    >>> from pyvista import _validation
-    >>> _validation.validate_axes(np.eye(3))
+    >>> import input_validation
+    >>> input_validation.validate_axes(np.eye(3))
     array([[1., 0., 0.],
            [0., 1., 0.],
            [0., 0., 1.]])
 
     Validate individual axes vectors as a 3x3 array.
 
-    >>> _validation.validate_axes([1, 0, 0], [0, 1, 0], [0, 0, 1])
+    >>> input_validation.validate_axes([1, 0, 0], [0, 1, 0], [0, 0, 1])
     array([[1., 0., 0.],
            [0., 1., 0.],
            [0., 0., 1.]])
 
     Create a validated left-handed axes array from two vectors.
 
-    >>> _validation.validate_axes(
+    >>> input_validation.validate_axes(
     ...     [1, 0, 0], [0, 1, 0], must_have_orientation='left'
     ... )
     array([[ 1.,  0.,  0.],
@@ -533,9 +533,9 @@ def validate_rotation(
     Validate a rotation matrix. The identity matrix is used as a toy example.
 
     >>> import numpy as np
-    >>> from pyvista import _validation
+    >>> import input_validation
     >>> rotation = np.eye(3)
-    >>> _validation.validate_rotation(rotation)
+    >>> input_validation.validate_rotation(rotation)
     array([[1., 0., 0.],
            [0., 1., 0.],
            [0., 0., 1.]])
@@ -543,7 +543,7 @@ def validate_rotation(
     By default, left-handed rotations (which include reflections) are allowed.
 
     >>> rotation *= -1  # Add reflections
-    >>> _validation.validate_rotation(rotation)
+    >>> input_validation.validate_rotation(rotation)
     array([[-1., -0., -0.],
            [-0., -1., -0.],
            [-0., -0., -1.]])
@@ -592,7 +592,7 @@ def validate_transform4x4(
         If the input is 3x3, the array is padded using a 4x4 identity matrix.
 
     must_be_finite : bool, default: True
-        :func:`Check <pyvista.core._validation.check.check_finite>`
+        :func:`Check <input_validation.check.check_finite>`
         if all elements of the array are finite, that is, not ``infinity``
         and not Not a Number (``NaN``).
 
@@ -667,7 +667,7 @@ def validate_transform3x3(
            Therefore, any 3x3 transformation is acceptable.
 
     must_be_finite : bool, default: True
-        :func:`Check <pyvista.core._validation.check.check_finite>`
+        :func:`Check <input_validation.check.check_finite>`
         if all elements of the array are finite, that is, not ``infinity``
         and not Not a Number (``NaN``).
 
@@ -769,18 +769,18 @@ def validate_number(num: float, /, *, reshape: bool = True, **kwargs):
     --------
     Validate a number.
 
-    >>> from pyvista import _validation
-    >>> _validation.validate_number(1)
+    >>> import input_validation
+    >>> input_validation.validate_number(1)
     1
 
     1D arrays are automatically reshaped.
 
-    >>> _validation.validate_number([42.0])
+    >>> input_validation.validate_number([42.0])
     42.0
 
     Additional checks can be added as needed.
 
-    >>> _validation.validate_number(
+    >>> input_validation.validate_number(
     ...     10, must_be_in_range=[0, 10], must_be_integer=True
     ... )
     10
@@ -831,13 +831,13 @@ def validate_data_range(rng: VectorLike[float], /, **kwargs):
     --------
     Validate a data range.
 
-    >>> from pyvista import _validation
-    >>> _validation.validate_data_range([-5, 5])
+    >>> import input_validation
+    >>> input_validation.validate_data_range([-5, 5])
     (-5, 5)
 
     Add additional constraints if needed.
 
-    >>> _validation.validate_data_range([0, 1.0], must_be_nonnegative=True)
+    >>> input_validation.validate_data_range([0, 1.0], must_be_nonnegative=True)
     (0.0, 1.0)
 
     """
@@ -893,19 +893,19 @@ def validate_arrayNx3(  # noqa: N802
     --------
     Validate an Nx3 array.
 
-    >>> from pyvista import _validation
-    >>> _validation.validate_arrayNx3(((1, 2, 3), (4, 5, 6)))
+    >>> import input_validation
+    >>> input_validation.validate_arrayNx3(((1, 2, 3), (4, 5, 6)))
     array([[1, 2, 3],
            [4, 5, 6]])
 
     One-dimensional 3-element arrays are automatically reshaped to 2D.
 
-    >>> _validation.validate_arrayNx3([1, 2, 3])
+    >>> input_validation.validate_arrayNx3([1, 2, 3])
     array([[1, 2, 3]])
 
     Add additional constraints.
 
-    >>> _validation.validate_arrayNx3(
+    >>> input_validation.validate_arrayNx3(
     ...     ((1, 2, 3), (4, 5, 6)), must_be_in_range=[0, 10]
     ... )
     array([[1, 2, 3],
@@ -965,24 +965,24 @@ def validate_arrayN(arr: float | VectorLike[float], /, *, reshape: bool = True, 
     --------
     Validate a 1D array with four elements.
 
-    >>> from pyvista import _validation
-    >>> _validation.validate_arrayN((1, 2, 3, 4))
+    >>> import input_validation
+    >>> input_validation.validate_arrayN((1, 2, 3, 4))
     array([1, 2, 3, 4])
 
     Scalar 0-dimensional values are automatically reshaped to be 1D.
 
-    >>> _validation.validate_arrayN(42.0)
+    >>> input_validation.validate_arrayN(42.0)
     array([42.0])
 
     2D arrays where the first dimension is unity are automatically
     reshaped to be 1D.
 
-    >>> _validation.validate_arrayN([[1, 2]])
+    >>> input_validation.validate_arrayN([[1, 2]])
     array([1, 2])
 
     Add additional constraints if needed.
 
-    >>> _validation.validate_arrayN((1, 2, 3), must_have_length=3)
+    >>> input_validation.validate_arrayN((1, 2, 3), must_have_length=3)
     array([1, 2, 3])
 
     """
@@ -1043,8 +1043,8 @@ def validate_arrayN_unsigned(  # noqa: N802
     Validate a 1D array with four non-negative integer-like elements.
 
     >>> import numpy as np
-    >>> from pyvista import _validation
-    >>> arr = _validation.validate_arrayN_unsigned((1.0, 2.0, 3.0, 4.0))
+    >>> import input_validation
+    >>> arr = input_validation.validate_arrayN_unsigned((1.0, 2.0, 3.0, 4.0))
     >>> arr
     array([1, 2, 3, 4])
 
@@ -1055,18 +1055,18 @@ def validate_arrayN_unsigned(  # noqa: N802
 
     Scalar 0-dimensional values are automatically reshaped to be 1D.
 
-    >>> _validation.validate_arrayN_unsigned(42)
+    >>> input_validation.validate_arrayN_unsigned(42)
     array([42])
 
     2D arrays where the first dimension is unity are automatically
     reshaped to be 1D.
 
-    >>> _validation.validate_arrayN_unsigned([[1, 2]])
+    >>> input_validation.validate_arrayN_unsigned([[1, 2]])
     array([1, 2])
 
     Add additional constraints if needed.
 
-    >>> _validation.validate_arrayN_unsigned((1, 2, 3), must_be_in_range=[1, 3])
+    >>> input_validation.validate_arrayN_unsigned((1, 2, 3), must_be_in_range=[1, 3])
     array([1, 2, 3])
 
     """
@@ -1137,24 +1137,24 @@ def validate_array3(
     --------
     Validate a 1D array with three elements.
 
-    >>> from pyvista import _validation
-    >>> _validation.validate_array3((1, 2, 3))
+    >>> import input_validation
+    >>> input_validation.validate_array3((1, 2, 3))
     array([1, 2, 3])
 
     2D 3-element arrays are automatically reshaped to be 1D.
 
-    >>> _validation.validate_array3([[1, 2, 3]])
+    >>> input_validation.validate_array3([[1, 2, 3]])
     array([1, 2, 3])
 
     Scalar 0-dimensional values can be automatically broadcast as
     a 3-element 1D array.
 
-    >>> _validation.validate_array3(42.0, broadcast=True)
+    >>> input_validation.validate_array3(42.0, broadcast=True)
     array([42.0, 42.0, 42.0])
 
     Add additional constraints if needed.
 
-    >>> _validation.validate_array3((1, 2, 3), must_be_nonnegative=True)
+    >>> input_validation.validate_array3((1, 2, 3), must_be_nonnegative=True)
     array([1, 2, 3])
 
     """
@@ -1221,13 +1221,13 @@ def validate_dimensionality(
     --------
     Validate a dimensionality.
 
-    >>> from pyvista import _validation
-    >>> _validation.validate_dimensionality('1D')
+    >>> import input_validation
+    >>> input_validation.validate_dimensionality('1D')
     1
 
     1D arrays are automatically reshaped.
 
-    >>> _validation.validate_dimensionality([3])
+    >>> input_validation.validate_dimensionality([3])
     3
 
     """
