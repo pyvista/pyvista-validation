@@ -700,16 +700,11 @@ def validate_transform3x3(
     except ValueError:
         pass
     except TypeError:
-        try:
-            from scipy.spatial.transform import Rotation
-        except ModuleNotFoundError:  # pragma: no cover
-            pass
-        else:
-            if isinstance(transform, Rotation):
-                # Get matrix output and try validating again
-                return validate_transform3x3(
-                    transform.as_matrix(), must_be_finite=must_be_finite, name=name
-                )
+        if isinstance(transform, _lazy_import.Rotation):
+            # Get matrix output and try validating again
+            return validate_transform3x3(
+                transform.as_matrix(), must_be_finite=must_be_finite, name=name
+            )
 
     error_message = (
         f'Input transform must be one of:\n'
