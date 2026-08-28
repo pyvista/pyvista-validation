@@ -1,7 +1,5 @@
 """Functions that validate input and return a standard representation.
 
-.. versionadded:: 0.43.0
-
 A ``validate`` function typically:
 
 * Uses :py:mod:`~input_validation.check` functions to
@@ -587,8 +585,8 @@ def validate_transform4x4(
     Parameters
     ----------
     transform : TransformLike
-        Transformation matrix as a 3x3 or 4x4 array, :vtk:`vtkMatrix3x3` or
-        :vtk:`vtkMatrix4x4`, :vtk:`vtkTransform`, or a SciPy ``Rotation`` instance.
+        Transformation matrix as a 3x3 or 4x4 array, ``vtkMatrix3x3`` or
+        ``vtkMatrix4x4``, ``vtkTransform``, or a SciPy ``Rotation`` instance.
         If the input is 3x3, the array is padded using a 4x4 identity matrix.
 
     must_be_finite : bool, default: True

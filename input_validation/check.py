@@ -1,7 +1,5 @@
 """Functions that check the type and/or value of inputs.
 
-.. versionadded:: 0.43.0
-
 A ``check`` function typically:
 
 * Performs a simple validation on a single input variable.
