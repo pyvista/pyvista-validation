@@ -1,0 +1,171 @@
+# input-validation
+
+Validate and standardize array-like input.
+
+These are the input validation functions developed for
+[PyVista](https://github.com/pyvista/pyvista), extracted into a standalone package so any
+project can use them. NumPy is the only required dependency: PyVista is not needed, and
+VTK and SciPy are optional.
+
+The functions are useful when writing Python methods that accept flexible array-like
+input, wrapping VTK, or anywhere you want one standard representation out of many
+possible inputs.
+
+## Installation
+
+```bash
+pip install input-validation
+```
+
+VTK and SciPy are only needed to validate their own object types, so they ship as extras:
+
+```bash
+pip install input-validation[vtk]    # accept vtkMatrix3x3, vtkMatrix4x4, vtkTransform
+pip install input-validation[scipy]  # accept scipy.spatial.transform.Rotation
+pip install input-validation[all]    # both
+```
+
+Neither is imported unless you actually pass one of their objects in.
+
+## Two families of function
+
+A **`check`** function:
+
+* Performs a simple validation on a single input variable.
+* Raises an error if the check fails due to invalid input.
+* Does not modify input or return anything.
+
+A **`validate`** function:
+
+* Uses `check` functions to check the type and/or value of input arguments.
+* Applies optional constraints -- for example input or output must have a specific
+  length, shape, type, data-type, etc.
+* Accepts many different input types or values and standardizes the output as a single
+  representation with known properties.
+
+## Usage
+
+`validate` functions return a standard representation:
+
+```python
+>>> import numpy as np
+>>> import input_validation as iv
+
+>>> iv.validate_array3([1, 2, 3])
+array([1, 2, 3])
+
+>>> iv.validate_arrayNx3([[1, 2, 3], [4, 5, 6]])
+array([[1, 2, 3],
+       [4, 5, 6]])
+
+>>> iv.validate_data_range([0, 1])
+(0, 1)
+```
+
+A 3x3 input to `validate_transform4x4` is padded into a 4x4 matrix:
+
+```python
+>>> iv.validate_transform4x4(np.eye(3))
+array([[1., 0., 0., 0.],
+       [0., 1., 0., 0.],
+       [0., 0., 1., 0.],
+       [0., 0., 0., 1.]])
+```
+
+`validate_array` is the general-purpose entry point that the others build on, and takes
+the constraints as keyword arguments:
+
+```python
+>>> iv.validate_array(
+...     [1, 2, 3], must_have_shape=(3,), must_be_in_range=[0, 5], dtype_out=float
+... )
+array([1., 2., 3.])
+```
+
+`check` functions return nothing and raise on failure:
+
+```python
+>>> iv.check_range([1, 5], rng=[0, 3])
+ValueError: Array values must all be less than or equal to 3.
+
+>>> iv.check_subdtype(np.array([1.0]), np.integer)
+TypeError: Input has incorrect dtype of 'float64'. The dtype must be a subtype of <class 'numpy.integer'>.
+```
+
+Error messages name the offending value and the constraint it violated:
+
+```python
+>>> iv.validate_array3([1, 2])
+ValueError: Array has shape (2,) which is not allowed. Shape must be one of [(3,), (1, 3), (3, 1)].
+```
+
+Pass `name=` to any function to control how the input is described in that message.
+
+## Common use cases
+
+| To validate | Use |
+| --- | --- |
+| A 3-element vector | `validate_array3` |
+| An Nx3 point or vector array | `validate_arrayNx3` |
+| Point or cell IDs | `validate_arrayN_unsigned` |
+| A transformation matrix | `validate_transform4x4` |
+| A rotation matrix | `validate_rotation` |
+
+## API reference
+
+### `validate` functions
+
+| Function | Description |
+| --- | --- |
+| `validate_array` | Check and validate a numeric array meets specific requirements. |
+| `validate_array3` | Validate a numeric 1D array with 3 elements. |
+| `validate_arrayN` | Validate a numeric 1D array. |
+| `validate_arrayN_unsigned` | Validate a numeric 1D array of non-negative (unsigned) integers. |
+| `validate_arrayNx3` | Validate an array is numeric and has shape Nx3. |
+| `validate_axes` | Validate 3D axes vectors. |
+| `validate_data_range` | Validate a data range. |
+| `validate_dimensionality` | Validate a dimensionality. |
+| `validate_number` | Validate a real, finite number. |
+| `validate_rotation` | Validate a rotation as a 3x3 matrix. |
+| `validate_transform3x3` | Validate transform-like input as a 3x3 `ndarray`. |
+| `validate_transform4x4` | Validate transform-like input as a 4x4 `ndarray`. |
+
+### `check` functions
+
+| Function | Description |
+| --- | --- |
+| `check_contains` | Check if an item is in a container. |
+| `check_finite` | Check if an array has finite values, that is, no NaN or Inf values. |
+| `check_greater_than` | Check if an array's elements are all greater than some value. |
+| `check_instance` | Check if an object is an instance of the given type or types. |
+| `check_integer` | Check if an array has integer or integer-like float values. |
+| `check_iterable` | Check if an object is an instance of `Iterable`. |
+| `check_iterable_items` | Check if an iterable's items all have a specified type. |
+| `check_length` | Check if the length of an array meets specific requirements. |
+| `check_less_than` | Check if an array's elements are all less than some value. |
+| `check_ndim` | Check if an array has the specified number of dimensions. |
+| `check_nonnegative` | Check if an array's elements are all nonnegative. |
+| `check_number` | Check if an object is an instance of `Number`. |
+| `check_range` | Check if an array's values are all within a specific range. |
+| `check_real` | Check if an array has real numbers (float or integer type). |
+| `check_sequence` | Check if an object is an instance of `Sequence`. |
+| `check_shape` | Check if an array has the specified shape. |
+| `check_sorted` | Check if an array's values are sorted. |
+| `check_string` | Check if an object is an instance of `str`. |
+| `check_subdtype` | Check if an input's data-type is a subtype of another data-type or data-types. |
+| `check_type` | Check if an object is one of the given type or types. |
+
+Every function has a full docstring with parameters and examples.
+
+## Relationship to PyVista
+
+This code began as `pyvista.core._validation` and keeps its full commit history here.
+PyVista is a downstream consumer, and CI runs PyVista's own validation test suite against
+this package on every change.
+
+One PyVista-specific helper, `_validate_color_sequence`, was not moved: it is built on
+`pyvista.plotting`'s `Color` class and stays with PyVista.
+
+## License
+
+MIT
