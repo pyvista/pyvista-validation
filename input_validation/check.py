@@ -29,14 +29,14 @@ from typing import get_origin
 import numpy as np
 import numpy.typing as npt
 
-from pyvista.core._validation._cast_array import _cast_to_numpy
+from input_validation._cast_array import _cast_to_numpy
 
 if TYPE_CHECKING:
-    from pyvista.core._typing_core import NumberType
-    from pyvista.core._typing_core import NumpyArray
-    from pyvista.core._typing_core import VectorLike
-    from pyvista.core._typing_core._aliases import _ArrayLikeOrScalar
-    from pyvista.core._typing_core._array_like import _NumberType
+    from input_validation._typing import NumberType
+    from input_validation._typing import NumpyArray
+    from input_validation._typing import VectorLike
+    from input_validation._typing._aliases import _ArrayLikeOrScalar
+    from input_validation._typing._array_like import _NumberType
 
 
 _Shape = tuple[()] | tuple[int, ...]

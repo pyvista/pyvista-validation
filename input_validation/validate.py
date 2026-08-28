@@ -24,31 +24,31 @@ from typing import Literal
 
 import numpy as np
 
-from pyvista import _vtk
-from pyvista.core._validation import check_contains
-from pyvista.core._validation import check_finite
-from pyvista.core._validation import check_integer
-from pyvista.core._validation import check_length
-from pyvista.core._validation import check_ndim
-from pyvista.core._validation import check_nonnegative
-from pyvista.core._validation import check_range
-from pyvista.core._validation import check_real
-from pyvista.core._validation import check_shape
-from pyvista.core._validation import check_sorted
-from pyvista.core._validation import check_string
-from pyvista.core._validation import check_subdtype
-from pyvista.core._validation._cast_array import _cast_to_numpy
-from pyvista.core._validation._cast_array import _cast_to_tuple
+from input_validation import _lazy_import
+from input_validation.check import check_contains
+from input_validation.check import check_finite
+from input_validation.check import check_integer
+from input_validation.check import check_length
+from input_validation.check import check_ndim
+from input_validation.check import check_nonnegative
+from input_validation.check import check_range
+from input_validation.check import check_real
+from input_validation.check import check_shape
+from input_validation.check import check_sorted
+from input_validation.check import check_string
+from input_validation.check import check_subdtype
+from input_validation._cast_array import _cast_to_numpy
+from input_validation._cast_array import _cast_to_tuple
 
 if TYPE_CHECKING:
     import numpy.typing as npt
 
-    from pyvista.core._typing_core import ArrayLike
-    from pyvista.core._typing_core import MatrixLike
-    from pyvista.core._typing_core import RotationLike
-    from pyvista.core._typing_core import TransformLike
-    from pyvista.core._typing_core import VectorLike
-    from pyvista.core._typing_core._array_like import NumpyArray
+    from input_validation._typing import ArrayLike
+    from input_validation._typing import MatrixLike
+    from input_validation._typing import RotationLike
+    from input_validation._typing import TransformLike
+    from input_validation._typing import VectorLike
+    from input_validation._typing._array_like import NumpyArray
 
     from .check import _ShapeLike
 
@@ -619,9 +619,9 @@ def validate_transform4x4(
         arr = np.eye(4)  # initialize
         arr[:3, :3] = validate_transform3x3(transform, must_be_finite=must_be_finite, name=name)
     except (ValueError, TypeError):
-        if isinstance(transform, _vtk.vtkMatrix4x4):
+        if isinstance(transform, _lazy_import.vtkMatrix4x4):
             arr = _array_from_vtkmatrix(transform, shape=(4, 4))  # type: ignore[assignment]
-        elif isinstance(transform, _vtk.vtkTransform):
+        elif isinstance(transform, _lazy_import.vtkTransform):
             arr = _array_from_vtkmatrix(transform.GetMatrix(), shape=(4, 4))  # type: ignore[assignment]
         else:
             try:
@@ -690,7 +690,7 @@ def validate_transform3x3(
 
     """
     check_string(name, name='Name')
-    if isinstance(transform, _vtk.vtkMatrix3x3):
+    if isinstance(transform, _lazy_import.vtkMatrix3x3):
         return _array_from_vtkmatrix(transform, shape=(3, 3))
     else:
         try:
@@ -725,7 +725,7 @@ def validate_transform3x3(
 
 
 def _array_from_vtkmatrix(
-    matrix: _vtk.vtkMatrix3x3 | _vtk.vtkMatrix4x4,
+    matrix: _lazy_import.vtkMatrix3x3 | _lazy_import.vtkMatrix4x4,
     shape: tuple[Literal[3], Literal[3]] | tuple[Literal[4], Literal[4]],
 ) -> NumpyArray[float]:
     """Convert a vtk matrix to an array."""
