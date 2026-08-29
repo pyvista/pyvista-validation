@@ -58,10 +58,12 @@ html_theme_options = {
     'use_edit_page_button': True,
     'navigation_with_keys': False,
     'show_navbar_depth': 1,
+    # Kept in sync with the icon links on docs.pyvista.org, minus the ones
+    # that do not apply to this package.
     'icon_links': [
         {
             'name': 'Slack Community',
-            'url': 'http://slack.pyvista.org',
+            'url': 'https://communityinviter.com/apps/pyvista/pyvista',
             'icon': 'fab fa-slack',
         },
         {
@@ -70,9 +72,9 @@ html_theme_options = {
             'icon': 'fa fa-comment fa-fw',
         },
         {
-            'name': 'Contributing',
-            'url': 'https://github.com/pyvista/pyvista/blob/main/CONTRIBUTING.rst',
-            'icon': 'fa fa-gavel fa-fw',
+            'name': 'PyPI',
+            'url': 'https://pypi.org/project/input-validation',
+            'icon': 'fa-brands fa-python',
         },
     ],
 }
