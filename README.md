@@ -27,13 +27,6 @@ pip install pyvista-validation[all]    # both
 
 Neither is imported unless you actually pass one of their objects in.
 
-The recommended import gives you the short name without owning the global
-`validation` module name in `site-packages`:
-
-```python
-from pyvista_validation import validation
-```
-
 ## Two families of function
 
 A **`check`** function:
@@ -56,23 +49,23 @@ A **`validate`** function:
 
 ```python
 >>> import numpy as np
->>> from pyvista_validation import validation
+>>> import pyvista_validation
 
->>> validation.validate_array3([1, 2, 3])
+>>> pyvista_validation.validate_array3([1, 2, 3])
 array([1, 2, 3])
 
->>> validation.validate_arrayNx3([[1, 2, 3], [4, 5, 6]])
+>>> pyvista_validation.validate_arrayNx3([[1, 2, 3], [4, 5, 6]])
 array([[1, 2, 3],
        [4, 5, 6]])
 
->>> validation.validate_data_range([0, 1])
+>>> pyvista_validation.validate_data_range([0, 1])
 (0, 1)
 ```
 
 A 3x3 input to `validate_transform4x4` is padded into a 4x4 matrix:
 
 ```python
->>> validation.validate_transform4x4(np.eye(3))
+>>> pyvista_validation.validate_transform4x4(np.eye(3))
 array([[1., 0., 0., 0.],
        [0., 1., 0., 0.],
        [0., 0., 1., 0.],
@@ -83,7 +76,7 @@ array([[1., 0., 0., 0.],
 the constraints as keyword arguments:
 
 ```python
->>> validation.validate_array(
+>>> pyvista_validation.validate_array(
 ...     [1, 2, 3], must_have_shape=(3,), must_be_in_range=[0, 5], dtype_out=float
 ... )
 array([1., 2., 3.])
@@ -92,12 +85,12 @@ array([1., 2., 3.])
 `check` functions return nothing and raise on failure:
 
 ```python
->>> validation.check_range([1, 5], rng=[0, 3])
+>>> pyvista_validation.check_range([1, 5], rng=[0, 3])
 Traceback (most recent call last):
     ...
 ValueError: Array values must all be less than or equal to 3.
 
->>> validation.check_subdtype(np.array([1.0]), np.integer)
+>>> pyvista_validation.check_subdtype(np.array([1.0]), np.integer)
 Traceback (most recent call last):
     ...
 TypeError: Input has incorrect dtype of 'float64'. The dtype must be a subtype of <class 'numpy.integer'>.
@@ -106,7 +99,7 @@ TypeError: Input has incorrect dtype of 'float64'. The dtype must be a subtype o
 Error messages name the offending value and the constraint it violated:
 
 ```python
->>> validation.validate_array3([1, 2])
+>>> pyvista_validation.validate_array3([1, 2])
 Traceback (most recent call last):
     ...
 ValueError: Array has shape (2,) which is not allowed. Shape must be one of [(3,), (1, 3), (3, 1)].

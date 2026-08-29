@@ -2,11 +2,6 @@
 
 from __future__ import annotations
 
-# Self-alias: gives users the short name without owning the global `validation`
-# module name in site-packages (which the unrelated `validation` dist claims):
-#     from pyvista_validation import validation
-import pyvista_validation as validation  # noqa: F401
-
 from .check import check_contains as check_contains
 from .check import check_finite as check_finite
 from .check import check_greater_than as check_greater_than

@@ -8,14 +8,7 @@ applies optional constraints, and standardizes the output as a single
 representation with known properties.
 
 Every function is importable directly from the top-level package, for example
-``from pyvista_validation import validate_array``. The recommended import binds
-the whole package to a short name:
-
-.. code-block:: python
-
-   from pyvista_validation import validation
-
-   validation.validate_array3([1, 2, 3])
+``from pyvista_validation import validate_array``.
 
 .. currentmodule:: pyvista_validation
 
