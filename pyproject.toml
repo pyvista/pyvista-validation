@@ -49,7 +49,7 @@ vtk = ['vtk']
 
 [project.urls]
 Documentation = 'https://validation.pyvista.org/'
-Homepage = 'https://github.com/pyvista/input-validation'
+Homepage = 'https://github.com/pyvista/pyvista-validation'
 
 [tool.uv.dependency-groups]
 # The pinned Sphinx needs a newer Python than the package itself supports.

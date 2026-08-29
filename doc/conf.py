@@ -44,7 +44,7 @@ intersphinx_mapping = {
 html_theme = 'sphinx_book_theme'
 html_context = {
     'github_user': 'pyvista',
-    'github_repo': 'input-validation',
+    'github_repo': 'pyvista-validation',
     'github_version': 'main',
     'doc_path': 'doc',
 }
@@ -53,7 +53,7 @@ html_baseurl = 'https://validation.pyvista.org/'
 
 html_theme_options = {
     'show_prev_next': False,
-    'github_url': 'https://github.com/pyvista/input-validation',
+    'github_url': 'https://github.com/pyvista/pyvista-validation',
     'collapse_navigation': True,
     'use_edit_page_button': True,
     'navigation_with_keys': False,
