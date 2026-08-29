@@ -4,6 +4,13 @@ requires = ['setuptools>=64', 'setuptools_scm>=8']
 
 [dependency-groups]
 dev = ['pre-commit', 'pytest', 'pytest-cov']
+docs = [
+  'numpydoc==1.10.0',
+  'sphinx-book-theme==1.1.4',
+  'sphinx-copybutton==0.5.2',
+  'sphinx-notfound-page==1.1.0',
+  'sphinx==8.2.3',
+]
 
 [project]
 authors = [{ name = 'The PyVista Developers', email = 'info@pyvista.org' }]
@@ -41,7 +48,12 @@ scipy = ['scipy']
 vtk = ['vtk']
 
 [project.urls]
+Documentation = 'https://validation.pyvista.org/'
 Homepage = 'https://github.com/pyvista/input-validation'
+
+[tool.uv.dependency-groups]
+# The pinned Sphinx needs a newer Python than the package itself supports.
+docs = { requires-python = '>=3.11' }
 
 [tool.coverage.run]
 branch = true
