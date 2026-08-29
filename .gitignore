@@ -3,6 +3,9 @@
 .coverage.*
 .idea/
 .venv/
+build/
+dist/
+doc/_build/
 *.egg-info/
 __pycache__/
 input_validation/_version.py
