@@ -5,6 +5,7 @@
 .venv/
 build/
 dist/
+doc/_autosummary/
 doc/_build/
 *.egg-info/
 __pycache__/
