@@ -10,19 +10,19 @@ import sys
 
 from pyvista.core._validation.validate import _validate_color_sequence
 
-import input_validation
-import input_validation._cast_array
-import input_validation.check
-import input_validation.validate
+import pyvista_validation
+import pyvista_validation._cast_array
+import pyvista_validation.check
+import pyvista_validation.validate
 
 # This helper stayed with PyVista, but its tests import it from the validation
 # package, so put it back on the module that replaces it.
-input_validation.validate._validate_color_sequence = _validate_color_sequence
+pyvista_validation.validate._validate_color_sequence = _validate_color_sequence
 
 _REPLACEMENTS = {
-    'pyvista.core._validation': input_validation,
-    'pyvista.core._validation._cast_array': input_validation._cast_array,
-    'pyvista.core._validation.check': input_validation.check,
-    'pyvista.core._validation.validate': input_validation.validate,
+    'pyvista.core._validation': pyvista_validation,
+    'pyvista.core._validation._cast_array': pyvista_validation._cast_array,
+    'pyvista.core._validation.check': pyvista_validation.check,
+    'pyvista.core._validation.validate': pyvista_validation.validate,
 }
 sys.modules.update(_REPLACEMENTS)

@@ -1,4 +1,4 @@
-"""input-validation documentation configuration."""
+"""pyvista-validation documentation configuration."""
 
 from __future__ import annotations
 
@@ -17,10 +17,10 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 master_doc = 'index'
 
-project = 'input-validation'
+project = 'pyvista-validation'
 copyright = f'{datetime.now().year}, PyVista'  # noqa: A001, DTZ005
 author = 'The PyVista developers'
-release = version = _metadata_version('input-validation')
+release = version = _metadata_version('pyvista-validation')
 
 language = 'en'
 exclude_patterns = ['_build']
@@ -44,7 +44,7 @@ intersphinx_mapping = {
 html_theme = 'sphinx_book_theme'
 html_context = {
     'github_user': 'pyvista',
-    'github_repo': 'input-validation',
+    'github_repo': 'pyvista-validation',
     'github_version': 'main',
     'doc_path': 'doc',
 }
@@ -53,7 +53,7 @@ html_baseurl = 'https://validation.pyvista.org/'
 
 html_theme_options = {
     'show_prev_next': False,
-    'github_url': 'https://github.com/pyvista/input-validation',
+    'github_url': 'https://github.com/pyvista/pyvista-validation',
     'collapse_navigation': True,
     'use_edit_page_button': True,
     'navigation_with_keys': False,
@@ -73,7 +73,7 @@ html_theme_options = {
         },
         {
             'name': 'PyPI',
-            'url': 'https://pypi.org/project/input-validation',
+            'url': 'https://pypi.org/project/pyvista-validation',
             'icon': 'fa-brands fa-python',
         },
     ],

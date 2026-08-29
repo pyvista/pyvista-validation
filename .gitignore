@@ -9,5 +9,5 @@ doc/_autosummary/
 doc/_build/
 *.egg-info/
 __pycache__/
-input_validation/_version.py
+pyvista_validation/_version.py
 uv.lock
