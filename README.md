@@ -11,6 +11,10 @@ The functions are useful when writing Python methods that accept flexible array-
 input, wrapping VTK, or anywhere you want one standard representation out of many
 possible inputs.
 
+> **Warning** — The API of this package is unstable and likely to change
+> between minor versions (for example `0.1.0` to `0.2.0`). Pin the exact
+> version you depend on, for example `pyvista-validation==0.1.0`.
+
 ## Installation
 
 ```bash
