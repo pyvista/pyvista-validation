@@ -175,8 +175,8 @@ Every function has a full docstring with parameters and examples.
 ## Relationship to PyVista
 
 This code began as `pyvista.core._validation` and keeps its full commit history here.
-PyVista is a downstream consumer, and CI runs PyVista's own validation test suite against
-this package on every change.
+PyVista is a downstream consumer, and CI installs this checkout into PyVista and runs
+PyVista's own core test suite against it on every change.
 
 One PyVista-specific helper, `_validate_color_sequence`, was not moved: it is built on
 `pyvista.plotting`'s `Color` class and stays with PyVista.

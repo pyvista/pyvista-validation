@@ -81,6 +81,9 @@ jobs:
     env:
       VIRTUAL_ENV: ${{ github.workspace }}/.venv
       PYVISTA_OFF_SCREEN: 'true'
+        # PyVista ref to integrate against. Switch back to main once
+        # pyvista/pyvista#8979, which adopts this package, is merged.
+      PYVISTA_REF: refactor/use-input-validation-package
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
       with:
@@ -90,20 +93,18 @@ jobs:
       with:
         enable-cache: false
     - run: sudo apt-get update && sudo apt-get install --yes libgl1 libxrender1 xvfb
-    - name: Clone the PyVista main branch
-      run: git clone --depth=1 --branch main --single-branch https://github.com/pyvista/pyvista.git "${{ runner.temp }}/pyvista"
-    - name: Install PyVista and this package into one environment
+    - name: Clone PyVista
+      run: git clone --depth=1 --branch "$PYVISTA_REF" --single-branch https://github.com/pyvista/pyvista.git "${{ runner.temp }}/pyvista"
+    - name: Install PyVista, with this checkout overriding its validation pin
       run: |
         uv venv
         uv pip install --editable "${{ runner.temp }}/pyvista" --group test --directory "${{ runner.temp }}/pyvista"
         uv pip install --editable '.[all]'
-    - name: Check the public API still matches PyVista's
-      run: .venv/bin/python tools/downstream_parity.py
-    - name: Run PyVista's validation suite against this package
+    - name: Confirm the local checkout is the installed pyvista-validation
+      run: .venv/bin/python -c "import os, pyvista_validation; f = pyvista_validation.__file__; print(f); assert f.startswith(os.environ['GITHUB_WORKSPACE'])"
+    - name: Run PyVista's core test suite
       working-directory: ${{ runner.temp }}/pyvista
-      env:
-        PYTHONPATH: ${{ github.workspace }}/tools
-      run: xvfb-run ${{ github.workspace }}/.venv/bin/python -m pytest tests/core/test_validation.py -p downstream_shim -v
+      run: xvfb-run ${{ github.workspace }}/.venv/bin/python -m pytest tests/core -n auto
 
   docs:
     runs-on: ubuntu-latest
