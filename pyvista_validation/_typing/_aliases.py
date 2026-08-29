@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Union
 
-from input_validation import _lazy_import
+from pyvista_validation import _lazy_import
 
 from ._array_like import NumberType
 from ._array_like import _ArrayLike

@@ -11,7 +11,7 @@ import sys
 
 from pyvista.core import _validation as upstream
 
-import input_validation
+import pyvista_validation
 
 # _validate_color_sequence builds pyvista.plotting Color objects, so it stayed
 # with PyVista when this package was split out.
@@ -29,7 +29,7 @@ def public_callables(module: object) -> set[str]:
 
 def main() -> int:
     """Report any upstream validation API this package fails to match."""
-    ours = public_callables(input_validation)
+    ours = public_callables(pyvista_validation)
     theirs = public_callables(upstream)
 
     problems = [
@@ -37,7 +37,7 @@ def main() -> int:
         for name in sorted(theirs - ours - KNOWN_MISSING)
     ]
     for name in sorted(ours & theirs):
-        ours_sig = inspect.signature(getattr(input_validation, name))
+        ours_sig = inspect.signature(getattr(pyvista_validation, name))
         theirs_sig = inspect.signature(getattr(upstream, name))
         if ours_sig != theirs_sig:
             problems.append(f'signature: {name}{theirs_sig} upstream, {ours_sig} here')

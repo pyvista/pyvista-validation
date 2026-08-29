@@ -1,4 +1,4 @@
-"""input-validation documentation configuration."""
+"""pyvista-validation documentation configuration."""
 
 from __future__ import annotations
 
@@ -17,10 +17,10 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 master_doc = 'index'
 
-project = 'input-validation'
+project = 'pyvista-validation'
 copyright = f'{datetime.now().year}, PyVista'  # noqa: A001, DTZ005
 author = 'The PyVista developers'
-release = version = _metadata_version('input-validation')
+release = version = _metadata_version('pyvista-validation')
 
 language = 'en'
 exclude_patterns = ['_build']
@@ -73,7 +73,7 @@ html_theme_options = {
         },
         {
             'name': 'PyPI',
-            'url': 'https://pypi.org/project/input-validation',
+            'url': 'https://pypi.org/project/pyvista-validation',
             'icon': 'fa-brands fa-python',
         },
     ],

@@ -1,4 +1,4 @@
-# input-validation
+# pyvista-validation
 
 Validate and standardize array-like input.
 
@@ -14,15 +14,15 @@ possible inputs.
 ## Installation
 
 ```bash
-pip install input-validation
+pip install pyvista-validation
 ```
 
 VTK and SciPy are only needed to validate their own object types, so they ship as extras:
 
 ```bash
-pip install input-validation[vtk]    # accept vtkMatrix3x3, vtkMatrix4x4, vtkTransform
-pip install input-validation[scipy]  # accept scipy.spatial.transform.Rotation
-pip install input-validation[all]    # both
+pip install pyvista-validation[vtk]    # accept vtkMatrix3x3, vtkMatrix4x4, vtkTransform
+pip install pyvista-validation[scipy]  # accept scipy.spatial.transform.Rotation
+pip install pyvista-validation[all]    # both
 ```
 
 Neither is imported unless you actually pass one of their objects in.
@@ -49,7 +49,7 @@ A **`validate`** function:
 
 ```python
 >>> import numpy as np
->>> import input_validation as iv
+>>> import pyvista_validation as iv
 
 >>> iv.validate_array3([1, 2, 3])
 array([1, 2, 3])

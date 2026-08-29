@@ -1,4 +1,4 @@
-input-validation
+pyvista-validation
 ================
 
 Validate and standardize array-like input.
@@ -16,16 +16,16 @@ Installation
 
 .. code-block:: bash
 
-   pip install input-validation
+   pip install pyvista-validation
 
 NumPy is the only required dependency. ``VTK`` and ``SciPy`` are only needed
 to validate their own object types, so they ship as extras:
 
 .. code-block:: bash
 
-   pip install input-validation[vtk]    # accept vtkMatrix3x3, vtkMatrix4x4, vtkTransform
-   pip install input-validation[scipy]  # accept scipy.spatial.transform.Rotation
-   pip install input-validation[all]    # both
+   pip install pyvista-validation[vtk]    # accept vtkMatrix3x3, vtkMatrix4x4, vtkTransform
+   pip install pyvista-validation[scipy]  # accept scipy.spatial.transform.Rotation
+   pip install pyvista-validation[all]    # both
 
 Neither is imported unless one of their objects is actually passed in.
 
@@ -33,13 +33,13 @@ Common use cases
 ----------------
 
 Validate a 3-element vector:
-    Use :func:`~input_validation.validate.validate_array3`
+    Use :func:`~pyvista_validation.validate.validate_array3`
 Validate an Nx3 point or vector array:
-    Use :func:`~input_validation.validate.validate_arrayNx3`
+    Use :func:`~pyvista_validation.validate.validate_arrayNx3`
 Validate point or cell IDs:
-    Use :func:`~input_validation.validate.validate_arrayN_unsigned`
+    Use :func:`~pyvista_validation.validate.validate_arrayN_unsigned`
 Validate a transformation matrix:
-    Use :func:`~input_validation.validate.validate_transform4x4`
+    Use :func:`~pyvista_validation.validate.validate_transform4x4`
 
 .. toctree::
    :maxdepth: 2

@@ -72,7 +72,7 @@ jobs:
       with:
         enable-cache: false
     - run: uv sync --group dev --python ${{ matrix.python-version }}
-    - run: uv run python -c "import input_validation, sys; assert not [m for m in sys.modules if m.startswith(('vtkmodules', 'scipy'))]"
+    - run: uv run python -c "import pyvista_validation, sys; assert not [m for m in sys.modules if m.startswith(('vtkmodules', 'scipy'))]"
     - run: uv run pytest tests/ --no-cov
 
   downstream:
