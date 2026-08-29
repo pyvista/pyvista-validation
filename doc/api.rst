@@ -8,9 +8,9 @@ applies optional constraints, and standardizes the output as a single
 representation with known properties.
 
 Every function is importable directly from the top-level package, for example
-``from input_validation import validate_array``.
+``from pyvista_validation import validate_array``.
 
-.. currentmodule:: input_validation
+.. currentmodule:: pyvista_validation
 
 .. autosummary::
    :toctree: _autosummary

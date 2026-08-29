@@ -8,12 +8,12 @@ import numpy as np
 import numpy.typing as npt
 
 if TYPE_CHECKING:
-    from input_validation._typing import ArrayLike
-    from input_validation._typing import NumberType
-    from input_validation._typing import NumpyArray
-    from input_validation._typing import _ArrayLikeOrScalar
-    from input_validation._typing import _FiniteNestedList
-    from input_validation._typing import _FiniteNestedTuple
+    from pyvista_validation._typing import ArrayLike
+    from pyvista_validation._typing import NumberType
+    from pyvista_validation._typing import NumpyArray
+    from pyvista_validation._typing import _ArrayLikeOrScalar
+    from pyvista_validation._typing import _FiniteNestedList
+    from pyvista_validation._typing import _FiniteNestedTuple
 
 
 def _cast_to_list(

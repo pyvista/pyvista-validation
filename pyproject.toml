@@ -36,20 +36,20 @@ description = 'Validate and standardize array-like input.'
 dynamic = ['version']
 keywords = ['array', 'numpy', 'validation']
 license = 'MIT'
-name = 'input-validation'
+name = 'pyvista-validation'
 readme = 'README.md'
 requires-python = '>=3.10'
 
 [project.optional-dependencies]
 # `vtk` and `scipy` are only needed to validate their respective object types;
 # `all` is the catch-all for everything on top of numpy.
-all = ['input-validation[scipy,vtk]']
+all = ['pyvista-validation[scipy,vtk]']
 scipy = ['scipy']
 vtk = ['vtk']
 
 [project.urls]
 Documentation = 'https://validation.pyvista.org/'
-Homepage = 'https://github.com/pyvista/input-validation'
+Homepage = 'https://github.com/pyvista/pyvista-validation'
 
 [tool.uv.dependency-groups]
 # The pinned Sphinx needs a newer Python than the package itself supports.
@@ -58,12 +58,12 @@ docs = { requires-python = '>=3.11' }
 [tool.coverage.run]
 branch = true
 # _typing is imported only by type checkers, never at runtime.
-omit = ['*/_version.py', 'input_validation/_typing/*']
+omit = ['*/_version.py', 'pyvista_validation/_typing/*']
 parallel = true
-source = ['input_validation']
+source = ['pyvista_validation']
 
 [tool.pytest.ini_options]
-addopts = '--cov=input_validation --cov-fail-under=95'
+addopts = '--cov=pyvista_validation --cov-fail-under=95'
 testpaths = 'tests'
 
 [tool.ruff]
@@ -113,7 +113,7 @@ ignore = ['D203', 'D211', 'D213']
 # These are runtime type aliases, not annotations. `Union` is required because
 # `X | Y` builds a `types.UnionType`, which cannot be subscripted to substitute
 # a TypeVar on Python 3.10.
-'input_validation/_typing/*' = ['UP007']
+'pyvista_validation/_typing/*' = ['UP007']
 'tests/*' = ['D103']
 # CI scripts report their findings on stdout.
 'tools/*' = ['T201']
@@ -129,11 +129,11 @@ keep-runtime-typing = true
 
 [tool.setuptools]
 license-files = ['LICENSE']
-packages = ['input_validation', 'input_validation._typing']
+packages = ['pyvista_validation', 'pyvista_validation._typing']
 
 [tool.setuptools.package-data]
-input_validation = ['py.typed']
+pyvista_validation = ['py.typed']
 
 [tool.setuptools_scm]
 version_scheme = 'release-branch-semver'
-write_to = 'input_validation/_version.py'
+write_to = 'pyvista_validation/_version.py'
