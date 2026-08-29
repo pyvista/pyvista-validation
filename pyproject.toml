@@ -48,6 +48,7 @@ scipy = ['scipy']
 vtk = ['vtk']
 
 [project.urls]
+Documentation = 'https://validation.pyvista.org/'
 Homepage = 'https://github.com/pyvista/input-validation'
 
 [tool.uv.dependency-groups]
