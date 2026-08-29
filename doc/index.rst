@@ -1,5 +1,5 @@
 pyvista-validation
-================
+==================
 
 Validate and standardize array-like input.
 
