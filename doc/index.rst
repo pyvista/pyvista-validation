@@ -11,6 +11,12 @@ an algorithm. They are useful when writing custom Python methods that accept
 flexible array-like input, wrapping ``VTK``, and/or when `Contributing to
 PyVista <https://github.com/pyvista/pyvista/blob/main/CONTRIBUTING.rst>`_.
 
+.. warning::
+
+   The API of this package is unstable and likely to change between minor
+   versions (for example ``0.1.0`` to ``0.2.0``). Pin the exact version you
+   depend on, for example ``pyvista-validation==0.1.0``.
+
 Installation
 ------------
 
