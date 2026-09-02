@@ -5,6 +5,7 @@ from __future__ import annotations
 import itertools
 import re
 import sys
+import types
 from typing import NamedTuple
 from typing import Union
 from typing import get_args
@@ -1200,9 +1201,53 @@ def test_lazy_import_caches_in_module_globals():
     assert 'vtkMatrix3x3' in vars(_lazy_import)
 
 
+def test_lazy_import_follows_the_vtk_backend(monkeypatch):
+    """PYVISTA_VTK_BACKEND selects a flat backend, matching PyVista."""
+    backend = types.ModuleType('fake_flat_vtk')
+    for name in ('vtkMatrix3x3', 'vtkMatrix4x4', 'vtkTransform'):
+        setattr(backend, name, type(name, (), {}))
+    monkeypatch.setitem(sys.modules, 'fake_flat_vtk', backend)
+    monkeypatch.setenv('PYVISTA_VTK_BACKEND', 'fake_flat_vtk')
+    for name in ('vtkMatrix3x3', 'vtkMatrix4x4', 'vtkTransform'):
+        _lazy_import.__dict__.pop(name, None)
+    try:
+        assert _lazy_import.vtkMatrix4x4 is backend.vtkMatrix4x4
+        assert _lazy_import.vtkTransform is backend.vtkTransform
+        assert isinstance(backend.vtkMatrix4x4(), _lazy_import.vtkMatrix4x4)
+    finally:
+        for name in ('vtkMatrix3x3', 'vtkMatrix4x4', 'vtkTransform'):
+            _lazy_import.__dict__.pop(name, None)
+
+
+def test_lazy_import_falls_back_to_backend_submodules(monkeypatch):
+    """A backend laid out like stock VTK resolves through its submodules."""
+    root = types.ModuleType('fake_stock_vtk')
+    root.__path__ = []  # mark as a package so submodules resolve
+    submodule = types.ModuleType('fake_stock_vtk.vtkCommonMath')
+    submodule.vtkMatrix4x4 = type('vtkMatrix4x4', (), {})
+    monkeypatch.setitem(sys.modules, 'fake_stock_vtk', root)
+    monkeypatch.setitem(sys.modules, 'fake_stock_vtk.vtkCommonMath', submodule)
+    monkeypatch.setenv('PYVISTA_VTK_BACKEND', 'fake_stock_vtk')
+    _lazy_import.__dict__.pop('vtkMatrix4x4', None)
+    try:
+        assert _lazy_import.vtkMatrix4x4 is submodule.vtkMatrix4x4
+    finally:
+        _lazy_import.__dict__.pop('vtkMatrix4x4', None)
+
+
+@needs_vtk
+def test_lazy_import_backend_vtk_means_vtkmodules(monkeypatch):
+    monkeypatch.setenv('PYVISTA_VTK_BACKEND', 'vtk')
+    _lazy_import.__dict__.pop('vtkMatrix3x3', None)
+    try:
+        assert _lazy_import.vtkMatrix3x3 is vtkMatrix3x3
+    finally:
+        _lazy_import.__dict__.pop('vtkMatrix3x3', None)
+
+
 def test_lazy_import_placeholder_when_unavailable(monkeypatch):
     """An unimportable name resolves to a placeholder with no instances."""
-    monkeypatch.setitem(_lazy_import._MODULES, 'Missing', 'a_package_that_is_not_installed')
+    monkeypatch.setitem(_lazy_import._SCIPY_MODULES, 'Missing', 'a_package_that_is_not_installed')
     try:
         placeholder = _lazy_import.Missing
         assert placeholder.__name__ == 'Missing'
