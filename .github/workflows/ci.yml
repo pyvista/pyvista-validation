@@ -81,9 +81,7 @@ jobs:
     env:
       VIRTUAL_ENV: ${{ github.workspace }}/.venv
       PYVISTA_OFF_SCREEN: 'true'
-        # PyVista ref to integrate against. Switch back to main once
-        # pyvista/pyvista#8979, which adopts this package, is merged.
-      PYVISTA_REF: refactor/use-input-validation-package
+      PYVISTA_REF: main   # the PyVista ref to integrate against
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
       with:
