@@ -32,11 +32,14 @@ autosummary_generate = True
 # The class-members table numpydoc adds is redundant with the autosummary pages.
 numpydoc_show_class_members = False
 
+# Remote inventory first, cached copy as fallback: CI runners cannot always reach
+# every docs host, and -W turns an unreachable inventory into a failed build.
+# Refresh the cache with doc/intersphinx/update.sh.
 intersphinx_mapping = {
-    'numpy': ('https://numpy.org/doc/stable/', None),
-    'python': ('https://docs.python.org/3/', None),
-    'pyvista': ('https://docs.pyvista.org/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
+    'numpy': ('https://numpy.org/doc/stable/', (None, 'intersphinx/numpy-objects.inv')),
+    'python': ('https://docs.python.org/3/', (None, 'intersphinx/python-objects.inv')),
+    'pyvista': ('https://docs.pyvista.org/', (None, 'intersphinx/pyvista-objects.inv')),
+    'scipy': ('https://docs.scipy.org/doc/scipy/', (None, 'intersphinx/scipy-objects.inv')),
 }
 
 # -- Options for HTML output --------------------------------------------------
