@@ -3,7 +3,15 @@ build-backend = 'setuptools.build_meta'
 requires = ['setuptools>=64', 'setuptools_scm>=8']
 
 [dependency-groups]
-dev = ['pre-commit', 'pytest', 'pytest-cov']
+dev = [
+  'lxml',
+  'mypy',
+  'pre-commit',
+  'pytest',
+  'pytest-cov',
+  'scipy-stubs',
+  'type-assert==0.1.0',
+]
 docs = [
   'numpydoc==1.10.0',
   'sphinx-book-theme==1.1.4',
@@ -62,9 +70,16 @@ omit = ['*/_version.py', 'pyvista_validation/_typing/*']
 parallel = true
 source = ['pyvista_validation']
 
+[tool.mypy]
+enable_error_code = ['ignore-without-code', 'redundant-expr', 'truthy-bool']
+packages = ['pyvista_validation']
+strict = true
+warn_unreachable = true
+
 [tool.pytest.ini_options]
 addopts = '--cov=pyvista_validation --cov-fail-under=95'
 testpaths = 'tests'
+type_assert_cases = 'tests/typing/cases'
 
 [tool.ruff]
 indent-width = 4
