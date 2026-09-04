@@ -7,9 +7,6 @@ import re
 import sys
 import types
 from typing import NamedTuple
-from typing import Union
-from typing import get_args
-from typing import get_origin
 
 import numpy as np
 import pytest
@@ -452,154 +449,166 @@ def test_check_range():
         check_range((1, 2, 3), [1, 3], strict_lower=True)
 
 
-class Case(NamedTuple):
-    """A validate_array test case and the error its invalid array must raise."""
+class Constraint(NamedTuple):
+    """A validate_array constraint, with an array that satisfies it and one that does not."""
 
-    kwarg: dict
-    valid_array: np.ndarray
-    invalid_array: np.ndarray
+    kwargs: dict
+    valid: object
+    invalid: object
     error_type: type
     error_match: str
 
 
-def numeric_array_test_cases():
-    return (
-        Case(
-            {
-                'must_be_finite': True,
-                'must_be_real': False,
-            },  # must be real is only added for extra coverage
-            0,
-            np.inf,
-            ValueError,
-            'must have finite values',
-        ),
-        Case({'must_be_real': True}, 0, 1 + 1j, TypeError, 'must have real numbers'),
-        Case(
-            {'must_be_integer': True},
-            0.0,
-            0.1,
-            ValueError,
-            'must have integer-like values',
-        ),
-        Case({'must_be_sorted': True}, [0, 1], [1, 0], ValueError, 'must be sorted'),
-        Case(
-            {'must_be_sorted': {'ascending': True, 'strict': False, 'axis': -1}},
-            [0, 1],
-            [1, 0],
-            ValueError,
-            'must be sorted',
-        ),
-    )
+CONSTRAINTS = (
+    Constraint(
+        {'must_be_finite': True, 'must_be_real': False},
+        0,
+        np.inf,
+        ValueError,
+        'must have finite values',
+    ),
+    Constraint({'must_be_real': True}, 0, 1 + 1j, TypeError, 'must have real numbers'),
+    Constraint({'must_be_integer': True}, 0.0, 0.1, ValueError, 'must have integer-like values'),
+    Constraint({'must_be_sorted': True}, [0, 1], [1, 0], ValueError, 'must be sorted'),
+    Constraint(
+        {'must_be_sorted': {'ascending': True, 'strict': False, 'axis': -1}},
+        [0, 1],
+        [1, 0],
+        ValueError,
+        'must be sorted',
+    ),
+)
+CONSTRAINT_IDS = ('finite', 'real', 'integer', 'sorted', 'sorted-kwargs')
+
+REPRESENTATIONS = ('tuple', 'list', 'ndarray', 'subclass')
 
 
-@pytest.mark.parametrize('name', ['_array', '_input'])
-@pytest.mark.parametrize('copy', [True, False])
-@pytest.mark.parametrize('as_any', [True, False])
-@pytest.mark.parametrize('to_list', [True, False])
-@pytest.mark.parametrize('to_tuple', [True, False])
-@pytest.mark.parametrize('dtype_out', [np.float32, np.float64])
-@pytest.mark.parametrize('case', numeric_array_test_cases())
-@pytest.mark.parametrize('stack_input', [True, False])
-@pytest.mark.parametrize('input_type', [tuple, list, np.ndarray, NdarraySubclass])
-def test_validate_array(
-    name,
-    copy,
-    as_any,
-    to_list,
-    to_tuple,
-    dtype_out,
-    case,
-    stack_input,
-    input_type,
-):
-    # Set up
-    valid_array = np.array(case.valid_array)
-    invalid_array = np.array(case.invalid_array)
+def as_representation(array, representation, *, stacked=False):
+    """Return ``array`` as the named container type, optionally stacked to 2D."""
+    array = np.array(array)
+    if stacked:
+        array = np.stack((array, array), axis=0)
+        array = np.stack((array, array), axis=1)
+    if representation == 'tuple':
+        return _cast_to_tuple(array)
+    if representation == 'list':
+        return array.tolist()
+    if representation == 'ndarray':
+        return array
+    return NdarraySubclass(array)
 
-    # Inputs may be scalar, use stacking to ensure we have test cases
-    # with multidimensional arrays
-    if stack_input:
-        valid_array = np.stack((valid_array, valid_array), axis=0)
-        valid_array = np.stack((valid_array, valid_array), axis=1)
-        invalid_array = np.stack((invalid_array, invalid_array), axis=0)
-        invalid_array = np.stack((invalid_array, invalid_array), axis=1)
 
-    if input_type is tuple:
-        valid_array = _cast_to_tuple(valid_array)
-        invalid_array = _cast_to_tuple(invalid_array)
-    elif input_type is list:
-        valid_array = valid_array.tolist()
-        invalid_array = invalid_array.tolist()
-    elif input_type is np.ndarray:
-        valid_array = np.asarray(valid_array)
-        invalid_array = np.asarray(invalid_array)
-    else:  # NdarraySubclass:
-        valid_array = NdarraySubclass(valid_array)
-        invalid_array = NdarraySubclass(invalid_array)
+@pytest.fixture(params=REPRESENTATIONS)
+def representation(request):
+    """Each container type validate_array accepts as input."""
+    return request.param
 
-    shape = np.array(valid_array).shape
-    common_kwargs = dict(
-        **case.kwarg,
-        name=name,
-        copy=copy,
-        as_any=as_any,
-        to_list=to_list,
-        to_tuple=to_tuple,
+
+@pytest.fixture(params=[False, True], ids=['scalar-or-1d', 'stacked'])
+def stacked(request):
+    """Whether the input is stacked into extra dimensions."""
+    return request.param
+
+
+def constraint_kwargs(array, constraint):
+    """Return the constraint's kwargs plus every shape/length constraint ``array`` satisfies."""
+    as_array = np.array(array)
+    shape = as_array.shape
+    return dict(
+        **constraint.kwargs,
         must_have_dtype=np.number,
-        dtype_out=dtype_out,
-        must_have_length=range(np.array(valid_array).size + 1),
+        must_have_length=range(as_array.size + 1),
         must_have_min_length=1,
-        must_have_max_length=np.array(valid_array).size,
+        must_have_max_length=as_array.size,
         must_have_shape=shape,
         must_have_ndim=len(shape),
         reshape_to=shape,
         broadcast_to=shape,
-        must_be_in_range=(np.min(valid_array), np.max(valid_array)),
-        must_be_nonnegative=np.all(np.array(valid_array) > 0),
+        must_be_in_range=(np.min(as_array), np.max(as_array)),
+        must_be_nonnegative=bool(np.all(as_array > 0)),
     )
 
-    # Test raises correct error with invalid input
-    with pytest.raises(case.error_type, match=case.error_match):
-        validate_array(invalid_array, **common_kwargs)
-    # Test error has correct name
-    with pytest.raises(case.error_type, match=name):
-        validate_array(invalid_array, **common_kwargs)
 
-    # Test no error with valid input
-    array_in = valid_array
-    array_out = validate_array(array_in, **common_kwargs)
-    assert np.array_equal(array_out, array_in)
+@pytest.mark.parametrize('constraint', CONSTRAINTS, ids=CONSTRAINT_IDS)
+def test_validate_array_accepts_valid(constraint, representation, stacked):
+    array = as_representation(constraint.valid, representation, stacked=stacked)
+    assert np.array_equal(validate_array(array, **constraint_kwargs(array, constraint)), array)
 
-    # Check output
-    if np.array(array_in).ndim == 0 and (to_tuple or to_list):
-        # test scalar input results in scalar output
-        assert isinstance(array_out, (float, int))
-    elif to_tuple:
-        assert type(array_out) is tuple
-    elif to_list:
-        assert isinstance(array_out, list)
-    else:
-        assert isinstance(array_out, np.ndarray)
-        assert array_out.dtype.type is dtype_out
-        if as_any:
-            if input_type is NdarraySubclass:
-                assert type(array_out) is NdarraySubclass
-            elif input_type is np.ndarray:
-                assert type(array_out) is np.ndarray
-            if (
-                not copy
-                and isinstance(array_in, np.ndarray)
-                and np.dtype(dtype_out) is array_in.dtype
-            ):
-                assert array_out is array_in
-            else:
-                assert array_out is not array_in
-        else:
-            assert type(array_out) is np.ndarray
 
-    if copy:
-        assert array_out is not array_in
+@pytest.mark.parametrize('constraint', CONSTRAINTS, ids=CONSTRAINT_IDS)
+def test_validate_array_rejects_invalid(constraint, representation, stacked):
+    valid = as_representation(constraint.valid, representation, stacked=stacked)
+    invalid = as_representation(constraint.invalid, representation, stacked=stacked)
+    with pytest.raises(constraint.error_type, match=constraint.error_match):
+        validate_array(invalid, **constraint_kwargs(valid, constraint))
+
+
+@pytest.mark.parametrize('name', ['_array', '_input'])
+@pytest.mark.parametrize('constraint', CONSTRAINTS, ids=CONSTRAINT_IDS)
+def test_validate_array_error_reports_name(constraint, name):
+    kwargs = constraint_kwargs(constraint.valid, constraint)
+    with pytest.raises(constraint.error_type, match=name):
+        validate_array(constraint.invalid, name=name, **kwargs)
+
+
+@pytest.mark.parametrize('dtype_out', [np.float32, np.float64])
+def test_validate_array_casts_to_dtype_out(representation, dtype_out):
+    array = as_representation([0, 1], representation)
+    assert validate_array(array, dtype_out=dtype_out).dtype.type is dtype_out
+
+
+def test_validate_array_to_list(representation):
+    array = as_representation([0, 1], representation)
+    out = validate_array(array, to_list=True)
+    assert isinstance(out, list)
+    assert out == [0, 1]
+
+
+def test_validate_array_to_tuple(representation):
+    array = as_representation([0, 1], representation)
+    out = validate_array(array, to_tuple=True)
+    assert type(out) is tuple
+    assert out == (0, 1)
+
+
+@pytest.mark.parametrize(('to_list', 'to_tuple'), [(True, False), (False, True), (True, True)])
+def test_validate_array_scalar_converts_to_scalar(to_list, to_tuple):
+    out = validate_array(1.0, to_list=to_list, to_tuple=to_tuple)
+    assert isinstance(out, (float, int))
+    assert out == 1.0
+
+
+def test_validate_array_scalar_stays_an_array_without_conversion():
+    assert isinstance(validate_array(1.0), np.ndarray)
+
+
+def test_validate_array_copy_returns_a_new_array():
+    array = np.array([0.0, 1.0])
+    assert validate_array(array, copy=True) is not array
+
+
+def test_validate_array_no_copy_reuses_the_input():
+    array = np.array([0.0, 1.0])
+    assert validate_array(array, copy=False, as_any=True, dtype_out=array.dtype) is array
+
+
+def test_validate_array_no_copy_still_copies_to_change_dtype():
+    array = np.array([0.0, 1.0])
+    assert validate_array(array, copy=False, as_any=True, dtype_out=np.float32) is not array
+
+
+@pytest.mark.parametrize(
+    ('representation', 'expected_type'),
+    [('ndarray', np.ndarray), ('subclass', NdarraySubclass)],
+)
+def test_validate_array_as_any_preserves_the_input_type(representation, expected_type):
+    array = as_representation([0, 1], representation)
+    assert type(validate_array(array, as_any=True)) is expected_type
+
+
+def test_validate_array_without_as_any_returns_a_base_ndarray():
+    array = as_representation([0, 1], 'subclass')
+    assert type(validate_array(array, as_any=False)) is np.ndarray
 
 
 @pytest.mark.parametrize('array', [(True,), 'abc'])
@@ -610,66 +619,71 @@ def test_validate_array_non_numeric(array):
     assert validate_array(array, must_be_real=False)
 
 
-@pytest.mark.parametrize('obj', [0, 0.0, '0'])
-@pytest.mark.parametrize('classinfo', [int, (int, float), [int, float]])
-@pytest.mark.parametrize('allow_subclass', [True, False])
+def test_check_instance_accepts_a_matching_instance():
+    check_instance(0, int)
+    check_instance(0.0, (int, float))
+
+
+def test_check_instance_accepts_a_subclass():
+    check_instance(True, int)  # bool subclasses int
+
+
 @pytest.mark.parametrize('name', ['_input', '_object'])
-def test_check_instance(obj, classinfo, allow_subclass, name):
-    if isinstance(classinfo, list):
-        with pytest.raises(TypeError):
-            check_instance(obj, classinfo)
-        return
+def test_check_instance_rejects_a_non_instance(name):
+    with pytest.raises(TypeError, match='Object must be an instance of'):
+        check_instance('0', int)
+    with pytest.raises(TypeError, match=f'{name} must be an instance of'):
+        check_instance('0', int, name=name)
 
-    if allow_subclass:
-        if isinstance(obj, classinfo):
-            check_instance(obj, classinfo)
-        else:
-            with pytest.raises(TypeError, match='Object must be an instance of'):
-                check_instance(obj, classinfo)
-            with pytest.raises(TypeError, match=f'{name} must be an instance of'):
-                check_instance(obj, classinfo, name=name)
 
-    elif type(classinfo) is tuple:
-        if type(obj) in classinfo:
-            check_type(obj, classinfo)
-        else:
-            with pytest.raises(TypeError, match=f'{name} must have one of the following types'):
-                check_type(obj, classinfo, name=name)
-            with pytest.raises(TypeError, match='Object must have one of the following types'):
-                check_type(obj, classinfo)
-    elif get_origin(classinfo) is Union:
-        if type(obj) in get_args(classinfo):
-            check_type(obj, classinfo)
-        else:
-            with pytest.raises(TypeError, match=f'{name} must have one of the following types'):
-                check_type(obj, classinfo, name=name)
-            with pytest.raises(TypeError, match='Object must have one of the following types'):
-                check_type(obj, classinfo)
-    elif type(obj) is classinfo:
-        check_type(obj, classinfo)
-    else:
-        with pytest.raises(TypeError, match=f'{name} must have type'):
-            check_type(obj, classinfo, name=name)
-        with pytest.raises(TypeError, match='Object must have type'):
-            check_type(obj, classinfo)
+def test_check_instance_rejects_a_list_of_types():
+    with pytest.raises(TypeError, match='must be a type'):
+        check_instance(0, [int, float])
 
+
+def test_check_instance_rejects_a_non_string_name():
     match = "Name must be a string, got <class 'int'> instead."
     with pytest.raises(TypeError, match=match):
         check_instance(0, int, name=0)
 
 
-def test_check_type():
-    check_type(0, int, name='abc')
+def test_check_type_accepts_an_exact_type():
     check_type(0, int)
-    with pytest.raises(TypeError):
-        check_type('str', int)
-    with pytest.raises(TypeError):
+    check_type(0, int, name='abc')
+
+
+def test_check_type_rejects_a_subclass():
+    # check_type is check_instance without subclass tolerance.
+    with pytest.raises(TypeError, match='must have type'):
+        check_type(True, int)
+
+
+@pytest.mark.parametrize('name', ['_input', '_object'])
+def test_check_type_rejects_a_wrong_type(name):
+    with pytest.raises(TypeError, match='Object must have type'):
+        check_type('0', int)
+    with pytest.raises(TypeError, match=f'{name} must have type'):
+        check_type('0', int, name=name)
+
+
+@pytest.mark.parametrize('classinfo', [(int, float), int | float])
+def test_check_type_accepts_any_of_several_types(classinfo):
+    check_type(0, classinfo)
+    check_type(0.0, classinfo)
+
+
+@pytest.mark.parametrize('classinfo', [(int, float), int | float])
+@pytest.mark.parametrize('name', ['_input', '_object'])
+def test_check_type_rejects_when_no_type_matches(classinfo, name):
+    with pytest.raises(TypeError, match='Object must have one of the following types'):
+        check_type('0', classinfo)
+    with pytest.raises(TypeError, match=f'{name} must have one of the following types'):
+        check_type('0', classinfo, name=name)
+
+
+def test_check_type_rejects_a_non_string_name():
+    with pytest.raises(TypeError, match='Name must be a string'):
         check_type(0, int, name=1)
-    check_type(0, int | float)
-
-
-def test_check_type_union():
-    check_type(0, int | float)
 
 
 def test_check_string():
@@ -821,74 +835,97 @@ def test_check_nonnegative():
         check_nonnegative(-1)
 
 
-@pytest.mark.parametrize('shape', [(), (8,), (4, 6), (2, 3, 4)])
-@pytest.mark.parametrize('axis', [None, -1, -2, -3, 0, 1, 2, 3])
-@pytest.mark.parametrize('ascending', [True, False])
+SORTED_SHAPES = ((8,), (4, 6), (2, 3, 4))
+
+
+def sorted_axes(shape):
+    """Yield every axis that is in bounds for ``shape``, including ``None``."""
+    ndim = len(shape)
+    return [None, *range(-ndim, ndim)]
+
+
+SHAPE_AXIS = [
+    pytest.param(shape, axis, id=f'{"x".join(map(str, shape))}-axis{axis}')
+    for shape in SORTED_SHAPES
+    for axis in sorted_axes(shape)
+]
+
+
+def sorted_arrays(shape, axis):
+    """Return ascending, strict-ascending, descending and strict-descending arrays."""
+    strict_ascending = np.arange(int(np.prod(shape))).reshape(shape)
+    ascending = np.repeat(strict_ascending, 2, axis=axis)
+    return (
+        ascending,
+        strict_ascending,
+        np.flip(ascending, axis=axis),
+        np.flip(strict_ascending, axis=axis),
+    )
+
+
 @pytest.mark.parametrize('strict', [True, False])
-def test_check_sorted(shape, axis, ascending, strict):
-    def _check_sorted_params(arr):
-        check_sorted(arr, axis=axis, strict=strict, ascending=ascending)
+@pytest.mark.parametrize('ascending', [True, False])
+def test_check_sorted_accepts_a_scalar(ascending, strict):
+    check_sorted(0, ascending=ascending, strict=strict)
 
-    if shape == ():
-        # test always succeeds with scalar
-        _check_sorted_params(0)
-        return
 
-    # Create ascending array with unique values
-    num_elements = np.prod(shape)
-    arr_strict_ascending = np.arange(num_elements).reshape(shape)
+@pytest.mark.parametrize(
+    ('shape', 'axis'), [((8,), 1), ((8,), -2), ((4, 6), 2), ((4, 6), -3), ((2, 3, 4), 3)]
+)
+def test_check_sorted_axis_out_of_bounds_raises(shape, axis):
+    array = np.arange(int(np.prod(shape))).reshape(shape)
+    match = f'Axis {axis} is out of bounds for ndim {array.ndim}'
+    with pytest.raises(ValueError, match=match):
+        check_sorted(array, axis=axis)
 
-    try:
-        # Create ascending array with duplicate values
-        arr_ascending = np.repeat(arr_strict_ascending, 2, axis=axis)
-        # Create descending arrays
-        arr_descending = np.flip(arr_ascending, axis=axis)
-        arr_strict_descending = np.flip(arr_strict_ascending, axis=axis)
-    except np.exceptions.AxisError:
-        # test ValueError is raised whenever an AxisError would otherwise be raised
-        with pytest.raises(
-            ValueError,
-            match=f'Axis {axis} is out of bounds for ndim {arr_strict_ascending.ndim}',
-        ):
-            _check_sorted_params(arr_strict_ascending)
-        return
 
-    if axis is None and arr_ascending.ndim > 1:
-        # test that axis=None will flatten array and cause it not to be sorted
-        # for higher dimension arrays
-        with pytest.raises(ValueError):  # noqa: PT011
-            _check_sorted_params(arr_ascending)
-        return
+def test_check_sorted_axis_none_flattens_the_array():
+    # Every row ascends, but the flattened array does not.
+    array = np.array([[0, 2, 4], [1, 3, 5]])
+    check_sorted(array, axis=-1)
+    with pytest.raises(ValueError, match='must be sorted'):
+        check_sorted(array, axis=None)
 
-    if strict and ascending:
-        _check_sorted_params(arr_strict_ascending)
-        for a in [arr_ascending, arr_descending, arr_strict_descending]:
-            with pytest.raises(
-                ValueError, match=r'must be sorted in strict ascending order. Got:'
-            ):
-                _check_sorted_params(a)
 
-    elif not strict and ascending:
-        _check_sorted_params(arr_ascending)
-        _check_sorted_params(arr_strict_ascending)
-        for a in [arr_descending, arr_strict_descending]:
-            with pytest.raises(ValueError, match=r'must be sorted in ascending order. Got:'):
-                _check_sorted_params(a)
+@pytest.mark.parametrize(('shape', 'axis'), SHAPE_AXIS)
+def test_check_sorted_accepts_ascending(shape, axis):
+    ascending, strict_ascending, _, _ = sorted_arrays(shape, axis)
+    check_sorted(ascending, axis=axis, ascending=True, strict=False)
+    check_sorted(strict_ascending, axis=axis, ascending=True, strict=False)
+    check_sorted(strict_ascending, axis=axis, ascending=True, strict=True)
 
-    elif strict and not ascending:
-        _check_sorted_params(arr_strict_descending)
-        for a in [arr_ascending, arr_strict_ascending, arr_descending]:
-            with pytest.raises(
-                ValueError, match=r'must be sorted in strict descending order. Got:'
-            ):
-                _check_sorted_params(a)
 
-    elif not strict and not ascending:
-        _check_sorted_params(arr_descending)
-        _check_sorted_params(arr_strict_descending)
-        for a in [arr_ascending, arr_strict_ascending]:
-            with pytest.raises(ValueError, match='must be sorted in descending order'):
-                _check_sorted_params(a)
+@pytest.mark.parametrize(('shape', 'axis'), SHAPE_AXIS)
+def test_check_sorted_accepts_descending(shape, axis):
+    _, _, descending, strict_descending = sorted_arrays(shape, axis)
+    check_sorted(descending, axis=axis, ascending=False, strict=False)
+    check_sorted(strict_descending, axis=axis, ascending=False, strict=False)
+    check_sorted(strict_descending, axis=axis, ascending=False, strict=True)
+
+
+@pytest.mark.parametrize(('shape', 'axis'), SHAPE_AXIS)
+def test_check_sorted_rejects_descending_when_ascending_expected(shape, axis):
+    _, _, descending, strict_descending = sorted_arrays(shape, axis)
+    for array in (descending, strict_descending):
+        with pytest.raises(ValueError, match='must be sorted in ascending order'):
+            check_sorted(array, axis=axis, ascending=True, strict=False)
+
+
+@pytest.mark.parametrize(('shape', 'axis'), SHAPE_AXIS)
+def test_check_sorted_rejects_ascending_when_descending_expected(shape, axis):
+    ascending, strict_ascending, _, _ = sorted_arrays(shape, axis)
+    for array in (ascending, strict_ascending):
+        with pytest.raises(ValueError, match='must be sorted in descending order'):
+            check_sorted(array, axis=axis, ascending=False, strict=False)
+
+
+@pytest.mark.parametrize(('shape', 'axis'), SHAPE_AXIS)
+def test_check_sorted_strict_rejects_duplicates(shape, axis):
+    ascending, _, descending, _ = sorted_arrays(shape, axis)
+    with pytest.raises(ValueError, match='must be sorted in strict ascending order'):
+        check_sorted(ascending, axis=axis, ascending=True, strict=True)
+    with pytest.raises(ValueError, match='must be sorted in strict descending order'):
+        check_sorted(descending, axis=axis, ascending=False, strict=True)
 
 
 def test_check_iterable_items():
