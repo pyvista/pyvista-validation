@@ -52,6 +52,30 @@ jobs:
     - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f   # v7.0.0
       with:
         files: ./coverage.xml
+        flags: tests
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  typing:
+      # mypy's Cobertura report counts a line as covered when every expression on
+      # it has a precise type, so codecov shows typing coverage next to test coverage.
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d   # v10.0.1
+      with:
+        enable-cache: false
+    - run: uv sync --group dev --extra all --python 3.14
+    - run: uv run --no-sync mypy --cobertura-xml-report typing-coverage --txt-report typing-coverage
+    - run: cat typing-coverage/index.txt
+    - run: uv run --no-sync pytest tests/typing --no-cov
+    - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f   # v7.0.0
+      with:
+        files: ./typing-coverage/cobertura.xml
+        flags: typing
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -136,7 +160,7 @@ jobs:
       id: deployment
 
   build:
-    needs: [pre-commit, test, test-minimal, downstream, docs]
+    needs: [pre-commit, test, typing, test-minimal, downstream, docs]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1

@@ -1,0 +1,26 @@
+# Test coverage and typing coverage are uploaded under separate flags so
+# neither number hides the other.
+flags:
+  tests:
+    paths: [pyvista_validation/]
+    carryforward: true
+  typing:
+    paths: [pyvista_validation/]
+    carryforward: true
+
+coverage:
+  status:
+    project:
+      tests:
+        flags: [tests]
+        target: 95%
+      typing:
+        flags: [typing]
+        target: 100%
+    patch:
+      tests:
+        flags: [tests]
+        target: 95%
+      typing:
+        flags: [typing]
+        target: 100%
