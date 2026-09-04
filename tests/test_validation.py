@@ -437,22 +437,26 @@ def test_check_range_accepts_a_degenerate_range():
 
 
 def test_check_range_rejects_values_above_the_upper_bound():
-    with pytest.raises(ValueError, match='Array values must all be less than or equal to 2.'):
+    with pytest.raises(
+        ValueError, match=re.escape('Array values must all be less than or equal to 2.')
+    ):
         check_range((1, 2, 3), [1, 2])
 
 
 def test_check_range_rejects_values_below_the_lower_bound():
-    with pytest.raises(ValueError, match='Input values must all be greater than or equal to 2.'):
+    with pytest.raises(
+        ValueError, match=re.escape('Input values must all be greater than or equal to 2.')
+    ):
         check_range((1, 2, 3), [2, 3], name='Input')
 
 
 def test_check_range_strict_upper_excludes_the_bound():
-    with pytest.raises(ValueError, match='Array values must all be less than 3.'):
+    with pytest.raises(ValueError, match=re.escape('Array values must all be less than 3.')):
         check_range((1, 2, 3), [1, 3], strict_upper=True)
 
 
 def test_check_range_strict_lower_excludes_the_bound():
-    with pytest.raises(ValueError, match='Array values must all be greater than 1.'):
+    with pytest.raises(ValueError, match=re.escape('Array values must all be greater than 1.')):
         check_range((1, 2, 3), [1, 3], strict_lower=True)
 
 
@@ -1370,7 +1374,7 @@ def test_check_sorted_rejects_equal_values_when_strict():
 
 
 def test_check_range_rejects_a_value_equal_to_a_strict_bound():
-    with pytest.raises(ValueError, match='Array values must all be greater than 2.'):
+    with pytest.raises(ValueError, match=re.escape('Array values must all be greater than 2.')):
         check_range([2], [2, 2], strict_lower=True)
 
 
@@ -1400,7 +1404,7 @@ def test_check_greater_than_rejects_an_equal_value_when_strict():
 
 
 def test_validate_array_rejects_a_bool_as_non_real():
-    with pytest.raises(TypeError, match='Array must have real numbers.'):
+    with pytest.raises(TypeError, match=re.escape('Array must have real numbers.')):
         validate_array(True, must_be_real=True)
 
 
