@@ -428,25 +428,85 @@ def test_validate_array3(reshape):
         validate_array3((1, 2, 3), must_have_shape=3)
 
 
-def test_check_range():
+def test_check_range_accepts_values_within_the_range():
     check_range((1, 2, 3), [1, 3])
 
-    match = 'Array values must all be less than or equal to 2.'
-    with pytest.raises(ValueError, match=match):
+
+def test_check_range_accepts_a_degenerate_range():
+    check_range([2, 2], [2, 2])
+
+
+def test_check_range_rejects_values_above_the_upper_bound():
+    with pytest.raises(ValueError, match='Array values must all be less than or equal to 2.'):
         check_range((1, 2, 3), [1, 2])
 
-    match = 'Input values must all be greater than or equal to 2.'
-    with pytest.raises(ValueError, match=match):
+
+def test_check_range_rejects_values_below_the_lower_bound():
+    with pytest.raises(ValueError, match='Input values must all be greater than or equal to 2.'):
         check_range((1, 2, 3), [2, 3], name='Input')
 
-    # Test strict bounds
-    match = 'Array values must all be less than 3.'
-    with pytest.raises(ValueError, match=match):
+
+def test_check_range_strict_upper_excludes_the_bound():
+    with pytest.raises(ValueError, match='Array values must all be less than 3.'):
         check_range((1, 2, 3), [1, 3], strict_upper=True)
 
-    match = 'Array values must all be greater than 1.'
-    with pytest.raises(ValueError, match=match):
+
+def test_check_range_strict_lower_excludes_the_bound():
+    with pytest.raises(ValueError, match='Array values must all be greater than 1.'):
         check_range((1, 2, 3), [1, 3], strict_lower=True)
+
+
+@pytest.mark.parametrize('array', [(1,), [1], np.ndarray((1,))])
+def test_check_length_accepts_a_length_one_container(array):
+    check_length(array)
+
+
+def test_check_length_accepts_every_constraint_at_once():
+    check_length((1,), exact_length=1, min_length=1, max_length=1, must_be_1d=True)
+
+
+def test_check_length_accepts_any_of_several_exact_lengths():
+    check_length((1,), exact_length=[1, 2.0])
+
+
+def test_check_length_rejects_a_non_integer_exact_length():
+    with pytest.raises(ValueError, match=r"'exact_length' must have integer-like values."):
+        check_length((1,), exact_length=(1, 2.4), name='_input')
+
+
+def test_check_length_rejects_a_wrong_exact_length():
+    match = '_input must have a length equal to any of: 1. Got length 2 instead.'
+    with pytest.raises(ValueError, match=match):
+        check_length((1, 2), exact_length=1, name='_input')
+
+
+def test_check_length_rejects_when_no_exact_length_matches():
+    match = '_input must have a length equal to any of: [3, 4]. Got length 2 instead.'
+    with pytest.raises(ValueError, match=re.escape(match)):
+        check_length((1, 2), exact_length=[3, 4], name='_input')
+
+
+def test_check_length_rejects_a_too_long_container():
+    match = '_input must have a maximum length of 1. Got length 2 instead.'
+    with pytest.raises(ValueError, match=match):
+        check_length((1, 2), max_length=1, name='_input')
+
+
+def test_check_length_rejects_a_too_short_container():
+    match = '_input must have a minimum length of 2. Got length 1 instead.'
+    with pytest.raises(ValueError, match=match):
+        check_length((1,), min_length=2, name='_input')
+
+
+def test_check_length_rejects_a_min_above_the_max():
+    match = 'Range with 2 elements must be sorted in ascending order. Got:\n    array([4, 2])'
+    with pytest.raises(ValueError, match=re.escape(match)):
+        check_length((1, 2, 3), min_length=4, max_length=2)
+
+
+def test_check_length_rejects_a_multidimensional_array_when_1d_required():
+    with pytest.raises(ValueError, match=re.escape('Shape must be -1.')):
+        check_length(((1, 2), (3, 4)), must_be_1d=True)
 
 
 class Constraint(NamedTuple):
@@ -781,52 +841,6 @@ def test_check_iterable():
         check_iterable(1, name='_input')
 
 
-def test_check_length():
-    check_length((1,))
-    check_length(
-        [
-            1,
-        ],
-    )
-    check_length(np.ndarray((1,)))
-    check_length((1,), exact_length=1, min_length=1, max_length=1, must_be_1d=True)
-    check_length((1,), exact_length=[1, 2.0])
-
-    with pytest.raises(ValueError, match=r"'exact_length' must have integer-like values."):
-        check_length((1,), exact_length=(1, 2.4), name='_input')
-
-    match = '_input must have a length equal to any of: 1. Got length 2 instead.'
-    with pytest.raises(ValueError, match=match):
-        check_length((1, 2), exact_length=1, name='_input')
-    match = '_input must have a length equal to any of: [3, 4]. Got length 2 instead.'
-    with pytest.raises(ValueError, match=re.escape(match)):
-        check_length((1, 2), exact_length=[3, 4], name='_input')
-
-    match = '_input must have a maximum length of 1. Got length 2 instead.'
-    with pytest.raises(ValueError, match=match):
-        check_length((1, 2), max_length=1, name='_input')
-
-    match = '_input must have a minimum length of 2. Got length 1 instead.'
-    with pytest.raises(ValueError, match=match):
-        check_length((1,), min_length=2, name='_input')
-
-    match = 'Range with 2 elements must be sorted in ascending order. Got:\n    array([4, 2])'
-    with pytest.raises(ValueError, match=re.escape(match)):
-        check_length(
-            (
-                1,
-                2,
-                3,
-            ),
-            min_length=4,
-            max_length=2,
-        )
-
-    match = 'Shape must be -1.'
-    with pytest.raises(ValueError, match=re.escape(match)):
-        check_length(((1, 2), (3, 4)), must_be_1d=True)
-
-
 def test_check_nonnegative():
     check_nonnegative(0)
     check_nonnegative(np.eye(3))
@@ -966,61 +980,90 @@ def test_check_contains():
         check_contains(range(4), must_contain=5, name='_input')
 
 
-@pytest.mark.parametrize('name', ['_input', 'Axes'])
-def test_validate_axes(name):
-    axes_right = np.eye(3)
-    axes_left = np.array([[1, 0.0, 0], [0, 1, 0], [0, 0, -1]])
+RIGHT_HANDED_AXES = np.eye(3)
+LEFT_HANDED_AXES = np.array([[1, 0.0, 0], [0, 1, 0], [0, 0, -1]])
 
-    # test different input args
-    axes = validate_axes(axes_right)
-    assert np.array_equal(axes, axes_right)
+
+@pytest.mark.parametrize(
+    'axes',
+    [
+        (RIGHT_HANDED_AXES,),
+        ([1, 0, 0], [[0, 1, 0]], (0, 0, 1)),
+    ],
+    ids=['matrix', 'three-vectors'],
+)
+def test_validate_axes_accepts_right_handed_axes(axes):
+    assert np.array_equal(validate_axes(*axes), RIGHT_HANDED_AXES)
+
+
+@pytest.mark.parametrize(
+    ('orientation', 'expected_third'), [('right', [0, 0, 1]), ('left', [0, 0, -1])]
+)
+def test_validate_axes_computes_the_third_vector_from_the_orientation(orientation, expected_third):
     axes = validate_axes(
-        [[1], [0], [0]],
-        [[0, 1, 0]],
-        must_have_orientation='right',
-        must_be_orthogonal=True,
+        [[1], [0], [0]], [[0, 1, 0]], must_have_orientation=orientation, must_be_orthogonal=True
     )
-    assert np.array_equal(axes, axes_right)
-    axes = validate_axes([1, 0, 0], [[0, 1, 0]], (0, 0, 1))
-    assert np.array_equal(axes, axes_right)
+    assert np.array_equal(axes[:2], [[1, 0, 0], [0, 1, 0]])
+    assert np.array_equal(axes[2], expected_third)
 
-    # test bad input
+
+@pytest.mark.parametrize('name', ['_input', '_axes'])
+def test_validate_axes_rejects_parallel_vectors(name):
     with pytest.raises(ValueError, match=f'{name} cannot be parallel.'):
         validate_axes([[1, 0, 0], [1, 0, 0], [0, 1, 0]], name=name)
     with pytest.raises(ValueError, match=r'Axes cannot be parallel.'):
         validate_axes([[0, 1, 0], [1, 0, 0], [0, 1, 0]])
-    with pytest.raises(ValueError, match=f'{name} cannot be zeros.'):
-        validate_axes([[1, 0, 0], [0, 1, 0], [0, 0, 0]], name=name)
+
+
+@pytest.mark.parametrize('zero_row', [0, 1, 2])
+def test_validate_axes_rejects_a_zero_vector(zero_row):
+    axes = np.eye(3)
+    axes[zero_row] = 0
     with pytest.raises(ValueError, match=r'Axes cannot be zeros.'):
-        validate_axes([[1, 0, 0], [0, 0, 0], [0, 0, 1]])
-    with pytest.raises(ValueError, match=r'Axes cannot be zeros.'):
-        validate_axes([[0, 0, 0], [0, 1, 0], [0, 0, 1]])
+        validate_axes(axes)
 
-    # test normalize
-    axes_scaled = axes_right * 2
-    axes = validate_axes(axes_scaled, normalize=False)
-    assert np.array_equal(axes, axes_scaled)
-    axes = validate_axes(axes_scaled, normalize=True)
-    assert np.array_equal(axes, axes_right)
 
-    # test orientation
-    validate_axes([1, 0, 0], [0, 1, 0], must_have_orientation='left')
-    validate_axes(axes_left, must_have_orientation=None)
-    validate_axes(axes_left, must_have_orientation='left')
-    with pytest.raises(ValueError, match=f'{name} do not have a right-handed orientation.'):
-        validate_axes(axes_left, must_have_orientation='right', name=name)
+def test_validate_axes_keeps_the_scale_without_normalize():
+    scaled = RIGHT_HANDED_AXES * 2
+    assert np.array_equal(validate_axes(scaled, normalize=False), scaled)
 
-    validate_axes(axes_right, must_have_orientation=None)
-    validate_axes(axes_right, must_have_orientation='right')
-    with pytest.raises(ValueError, match=f'{name} do not have a left-handed orientation.'):
-        validate_axes(axes_right, must_have_orientation='left', name=name)
 
-    # test specifying two vectors without orientation raises error (3rd cannot be computed)
-    with pytest.raises(
-        ValueError,
-        match=f'{name} orientation must be specified when only two vectors are given.',
-    ):
-        validate_axes([1, 0, 0], [0, 1, 0], must_have_orientation=None, name=name)
+def test_validate_axes_normalize_returns_unit_vectors():
+    assert np.array_equal(validate_axes(RIGHT_HANDED_AXES * 2, normalize=True), RIGHT_HANDED_AXES)
+
+
+@pytest.mark.parametrize(
+    ('axes', 'orientation'),
+    [
+        (LEFT_HANDED_AXES, None),
+        (LEFT_HANDED_AXES, 'left'),
+        (RIGHT_HANDED_AXES, None),
+        (RIGHT_HANDED_AXES, 'right'),
+    ],
+    ids=['left-any', 'left-left', 'right-any', 'right-right'],
+)
+def test_validate_axes_accepts_a_matching_orientation(axes, orientation):
+    validate_axes(axes, must_have_orientation=orientation)
+
+
+@pytest.mark.parametrize(
+    ('axes', 'orientation', 'expected'),
+    [
+        (LEFT_HANDED_AXES, 'right', 'right-handed'),
+        (RIGHT_HANDED_AXES, 'left', 'left-handed'),
+    ],
+)
+def test_validate_axes_rejects_a_mismatched_orientation(axes, orientation, expected):
+    match = f'_input do not have a {expected} orientation.'
+    with pytest.raises(ValueError, match=match):
+        validate_axes(axes, must_have_orientation=orientation, name='_input')
+
+
+def test_validate_axes_two_vectors_require_an_orientation():
+    # The third vector cannot be computed without one.
+    match = '_input orientation must be specified when only two vectors are given.'
+    with pytest.raises(ValueError, match=match):
+        validate_axes([1, 0, 0], [0, 1, 0], must_have_orientation=None, name='_input')
 
 
 @pytest.mark.parametrize('bias_index', [(0, 1), (1, 0), (2, 0)])
@@ -1291,3 +1334,108 @@ def test_lazy_import_placeholder_when_unavailable(monkeypatch):
         assert not isinstance(np.eye(4), placeholder)
     finally:
         _lazy_import.__dict__.pop('Missing', None)
+
+
+# Edge cases: empty and degenerate input, and boundary values, which the
+# per-function tests above do not exercise.
+
+
+@pytest.mark.parametrize(
+    'function', [validate_array, validate_arrayN], ids=['validate_array', 'validate_arrayN']
+)
+def test_empty_array_is_valid(function):
+    assert function([]).shape == (0,)
+
+
+@pytest.mark.parametrize('kwargs', [{'must_be_sorted': True}, {'must_be_finite': True}])
+def test_empty_array_satisfies_elementwise_constraints(kwargs):
+    # There is no element to violate them.
+    assert validate_array(np.array([]), **kwargs).size == 0
+
+
+@pytest.mark.parametrize('array', [[], [5]], ids=['empty', 'single'])
+@pytest.mark.parametrize('strict', [True, False])
+@pytest.mark.parametrize('ascending', [True, False])
+def test_check_sorted_accepts_fewer_than_two_elements(array, ascending, strict):
+    check_sorted(array, ascending=ascending, strict=strict)
+
+
+def test_check_sorted_accepts_equal_values_when_not_strict():
+    check_sorted([1, 1, 1], strict=False)
+
+
+def test_check_sorted_rejects_equal_values_when_strict():
+    with pytest.raises(ValueError, match='must be sorted in strict ascending order'):
+        check_sorted([1, 1, 1], strict=True)
+
+
+def test_check_range_rejects_a_value_equal_to_a_strict_bound():
+    with pytest.raises(ValueError, match='Array values must all be greater than 2.'):
+        check_range([2], [2, 2], strict_lower=True)
+
+
+@pytest.mark.parametrize('value', [1, 1.0, -3.0, -0.0])
+def test_check_integer_accepts_integer_valued_floats(value):
+    check_integer(value)
+
+
+def test_check_integer_accepts_infinity():
+    # np.round(inf) == inf, so infinity counts as integer-like.
+    check_integer(np.inf)
+
+
+@pytest.mark.parametrize('value', [np.nan, np.inf, -np.inf])
+def test_check_finite_rejects_non_finite_values(value):
+    with pytest.raises(ValueError, match='must have finite values'):
+        check_finite(value)
+
+
+def test_check_greater_than_accepts_an_equal_value_when_not_strict():
+    check_greater_than(1, 1, strict=False)
+
+
+def test_check_greater_than_rejects_an_equal_value_when_strict():
+    with pytest.raises(ValueError, match='must all be greater than 1'):
+        check_greater_than(1, 1, strict=True)
+
+
+def test_validate_array_rejects_a_bool_as_non_real():
+    with pytest.raises(TypeError, match='Array must have real numbers.'):
+        validate_array(True, must_be_real=True)
+
+
+def test_validate_array_negative_zero_is_nonnegative():
+    assert validate_array(-0.0, must_be_nonnegative=True) == 0.0
+
+
+def test_validate_array_broadcasts_a_scalar():
+    assert np.array_equal(validate_array(1, broadcast_to=(3,)), [1, 1, 1])
+
+
+def test_validate_array_reshapes_to_the_requested_shape():
+    assert validate_array([1, 2, 3], reshape_to=(3, 1)).shape == (3, 1)
+
+
+def test_check_shape_accepts_any_of_several_shapes():
+    check_shape([1, 2], [(2,), (3,)])
+
+
+def test_check_shape_rejects_when_no_shape_matches():
+    with pytest.raises(ValueError, match='Shape must be one of'):
+        check_shape([1, 2], [(1,), (3,)])
+
+
+def test_check_ndim_accepts_any_of_several_dimensions():
+    check_ndim([[1]], [1, 2])
+
+
+@pytest.mark.parametrize('array', [1, [1], [[1]]], ids=['0d', '1d', '2d'])
+def test_check_ndim_rejects_a_wrong_number_of_dimensions(array):
+    ndim = np.array(array).ndim
+    match = f'Array has the incorrect number of dimensions. Got {ndim}, expected {ndim + 1}.'
+    with pytest.raises(ValueError, match=re.escape(match)):
+        check_ndim(array, ndim + 1)
+
+
+def test_check_iterable_items_accepts_an_empty_iterable():
+    check_iterable_items([], int)
