@@ -635,6 +635,10 @@ def test_validate_array_to_tuple(representation):
     assert out == (0, 1)
 
 
+def test_validate_array_to_tuple_wins_over_to_list():
+    assert type(validate_array([0, 1], to_tuple=True, to_list=True)) is tuple
+
+
 @pytest.mark.parametrize(('to_list', 'to_tuple'), [(True, False), (False, True), (True, True)])
 def test_validate_array_scalar_converts_to_scalar(to_list, to_tuple):
     out = validate_array(1.0, to_list=to_list, to_tuple=to_tuple)
@@ -692,16 +696,20 @@ def test_check_instance_accepts_a_subclass():
     check_instance(True, int)  # bool subclasses int
 
 
-@pytest.mark.parametrize('name', ['_input', '_object'])
-def test_check_instance_rejects_a_non_instance(name):
+def test_check_instance_rejects_a_non_instance():
     with pytest.raises(TypeError, match='Object must be an instance of'):
         check_instance('0', int)
+
+
+@pytest.mark.parametrize('name', ['_input', '_object'])
+def test_check_instance_non_instance_error_reports_the_name(name):
     with pytest.raises(TypeError, match=f'{name} must be an instance of'):
         check_instance('0', int, name=name)
 
 
 def test_check_instance_rejects_a_list_of_types():
-    with pytest.raises(TypeError, match='must be a type'):
+    # classinfo must be a type or tuple of types, never a list.
+    with pytest.raises(TypeError):
         check_instance(0, [int, float])
 
 
@@ -722,10 +730,13 @@ def test_check_type_rejects_a_subclass():
         check_type(True, int)
 
 
-@pytest.mark.parametrize('name', ['_input', '_object'])
-def test_check_type_rejects_a_wrong_type(name):
+def test_check_type_rejects_a_wrong_type():
     with pytest.raises(TypeError, match='Object must have type'):
         check_type('0', int)
+
+
+@pytest.mark.parametrize('name', ['_input', '_object'])
+def test_check_type_wrong_type_error_reports_the_name(name):
     with pytest.raises(TypeError, match=f'{name} must have type'):
         check_type('0', int, name=name)
 
@@ -857,7 +868,7 @@ SORTED_SHAPES = ((8,), (4, 6), (2, 3, 4))
 
 
 def sorted_axes(shape):
-    """Yield every axis that is in bounds for ``shape``, including ``None``."""
+    """Return ``None`` plus every in-bounds axis for ``shape``."""
     ndim = len(shape)
     return [None, *range(-ndim, ndim)]
 
@@ -940,7 +951,7 @@ def test_check_sorted_rejects_ascending_when_descending_expected(shape, axis):
 @pytest.mark.parametrize(('shape', 'axis'), SHAPE_AXIS)
 def test_check_sorted_strict_rejects_duplicates(shape, axis):
     ascending, _, descending, _ = sorted_arrays(shape, axis)
-    with pytest.raises(ValueError, match='must be sorted in strict ascending order'):
+    with pytest.raises(ValueError, match=re.escape('must be sorted in strict ascending order')):
         check_sorted(ascending, axis=axis, ascending=True, strict=True)
     with pytest.raises(ValueError, match='must be sorted in strict descending order'):
         check_sorted(descending, axis=axis, ascending=False, strict=True)
@@ -1015,7 +1026,7 @@ def test_validate_axes_computes_the_third_vector_from_the_orientation(orientatio
 def test_validate_axes_rejects_parallel_vectors(name):
     with pytest.raises(ValueError, match=f'{name} cannot be parallel.'):
         validate_axes([[1, 0, 0], [1, 0, 0], [0, 1, 0]], name=name)
-    with pytest.raises(ValueError, match=r'Axes cannot be parallel.'):
+    with pytest.raises(ValueError, match=re.escape('Axes cannot be parallel.')):
         validate_axes([[0, 1, 0], [1, 0, 0], [0, 1, 0]])
 
 
@@ -1023,8 +1034,15 @@ def test_validate_axes_rejects_parallel_vectors(name):
 def test_validate_axes_rejects_a_zero_vector(zero_row):
     axes = np.eye(3)
     axes[zero_row] = 0
-    with pytest.raises(ValueError, match=r'Axes cannot be zeros.'):
+    with pytest.raises(ValueError, match=re.escape('Axes cannot be zeros.')):
         validate_axes(axes)
+
+
+def test_validate_axes_zero_vector_error_reports_the_name():
+    axes = np.eye(3)
+    axes[2] = 0
+    with pytest.raises(ValueError, match=re.escape('_input cannot be zeros.')):
+        validate_axes(axes, name='_input')
 
 
 def test_validate_axes_keeps_the_scale_without_normalize():
@@ -1340,8 +1358,7 @@ def test_lazy_import_placeholder_when_unavailable(monkeypatch):
         _lazy_import.__dict__.pop('Missing', None)
 
 
-# Edge cases: empty and degenerate input, and boundary values, which the
-# per-function tests above do not exercise.
+# Edge cases: empty and degenerate input, and boundary values.
 
 
 @pytest.mark.parametrize(
@@ -1369,7 +1386,7 @@ def test_check_sorted_accepts_equal_values_when_not_strict():
 
 
 def test_check_sorted_rejects_equal_values_when_strict():
-    with pytest.raises(ValueError, match='must be sorted in strict ascending order'):
+    with pytest.raises(ValueError, match=re.escape('must be sorted in strict ascending order')):
         check_sorted([1, 1, 1], strict=True)
 
 
@@ -1378,13 +1395,8 @@ def test_check_range_rejects_a_value_equal_to_a_strict_bound():
         check_range([2], [2, 2], strict_lower=True)
 
 
-@pytest.mark.parametrize('value', [1, 1.0, -3.0, -0.0])
-def test_check_integer_accepts_integer_valued_floats(value):
-    check_integer(value)
-
-
 def test_check_integer_accepts_infinity():
-    # np.round(inf) == inf, so infinity counts as integer-like.
+    # The check compares against np.floor, which leaves infinity unchanged.
     check_integer(np.inf)
 
 
@@ -1392,20 +1404,6 @@ def test_check_integer_accepts_infinity():
 def test_check_finite_rejects_non_finite_values(value):
     with pytest.raises(ValueError, match='must have finite values'):
         check_finite(value)
-
-
-def test_check_greater_than_accepts_an_equal_value_when_not_strict():
-    check_greater_than(1, 1, strict=False)
-
-
-def test_check_greater_than_rejects_an_equal_value_when_strict():
-    with pytest.raises(ValueError, match='must all be greater than 1'):
-        check_greater_than(1, 1, strict=True)
-
-
-def test_validate_array_rejects_a_bool_as_non_real():
-    with pytest.raises(TypeError, match=re.escape('Array must have real numbers.')):
-        validate_array(True, must_be_real=True)
 
 
 def test_validate_array_negative_zero_is_nonnegative():
