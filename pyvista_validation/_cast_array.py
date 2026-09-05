@@ -38,20 +38,18 @@ if TYPE_CHECKING:
 # at runtime, so the overlap is ignored where it is reported.
 
 
+# fmt: off
 @overload
 def _cast_to_list(arr: _EmptyList, /) -> _ToListFloat: ...  # type: ignore[overload-overlap]
 @overload
-def _cast_to_list(
-    arr: npt.NDArray[np.bool_] | np.bool_ | bool | _NestedBool, /
-) -> _ToListBool: ...
+def _cast_to_list(arr: npt.NDArray[np.bool_] | np.bool_ | bool | _NestedBool, /) -> _ToListBool: ...
 @overload
 def _cast_to_list(arr: npt.NDArray[_Integer] | _Integer | int | _NestedInt, /) -> _ToListInt: ...
 @overload
-def _cast_to_list(
-    arr: npt.NDArray[_Floating] | _Floating | float | _NestedFloat, /
-) -> _ToListFloat: ...
+def _cast_to_list(arr: npt.NDArray[_Floating] | _Floating | float | _NestedFloat, /) -> _ToListFloat: ...
 @overload
 def _cast_to_list(arr: _ArrayLikeOrScalar, /) -> _ToList: ...
+# fmt: on
 def _cast_to_list(arr: _ArrayLikeOrScalar, /) -> _ToList:
     """Cast an array to a nested list.
 
@@ -69,20 +67,18 @@ def _cast_to_list(arr: _ArrayLikeOrScalar, /) -> _ToList:
     return _tolist(_cast_to_numpy(arr))
 
 
+# fmt: off
 @overload
 def _cast_to_tuple(arr: _EmptyList, /) -> _ToTupleFloat: ...  # type: ignore[overload-overlap]
 @overload
-def _cast_to_tuple(
-    arr: npt.NDArray[np.bool_] | np.bool_ | bool | _NestedBool, /
-) -> _ToTupleBool: ...
+def _cast_to_tuple(arr: npt.NDArray[np.bool_] | np.bool_ | bool | _NestedBool, /) -> _ToTupleBool: ...
 @overload
 def _cast_to_tuple(arr: npt.NDArray[_Integer] | _Integer | int | _NestedInt, /) -> _ToTupleInt: ...
 @overload
-def _cast_to_tuple(
-    arr: npt.NDArray[_Floating] | _Floating | float | _NestedFloat, /
-) -> _ToTupleFloat: ...
+def _cast_to_tuple(arr: npt.NDArray[_Floating] | _Floating | float | _NestedFloat, /) -> _ToTupleFloat: ...
 @overload
 def _cast_to_tuple(arr: _ArrayLikeOrScalar, /) -> _ToTuple: ...
+# fmt: on
 def _cast_to_tuple(arr: _ArrayLikeOrScalar, /) -> _ToTuple:
     """Cast an array to a nested tuple.
 
@@ -100,106 +96,28 @@ def _cast_to_tuple(arr: _ArrayLikeOrScalar, /) -> _ToTuple:
     return cast('_ToTuple', _to_tuple(_cast_to_list(arr)))
 
 
+# fmt: off
 @overload
-def _cast_to_numpy(  # type: ignore[overload-overlap]
-    arr: npt.NDArray[_ScalarT] | _ScalarT,
-    /,
-    *,
-    as_any: bool = ...,
-    dtype: None = None,
-    copy: bool = ...,
-    must_be_real: bool = ...,
-) -> npt.NDArray[_ScalarT]: ...
+def _cast_to_numpy(arr: npt.NDArray[_ScalarT] | _ScalarT, /, *, as_any: bool = ..., dtype: None = None, copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[_ScalarT]: ...  # type: ignore[overload-overlap]
 @overload
-def _cast_to_numpy(  # type: ignore[overload-overlap]
-    arr: _EmptyList,
-    /,
-    *,
-    as_any: bool = ...,
-    dtype: None = None,
-    copy: bool = ...,
-    must_be_real: bool = ...,
-) -> npt.NDArray[np.float64]: ...
+def _cast_to_numpy(arr: _EmptyList, /, *, as_any: bool = ..., dtype: None = None, copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[np.float64]: ...  # type: ignore[overload-overlap]
 @overload
-def _cast_to_numpy(  # type: ignore[overload-overlap]
-    arr: bool | _NestedBool,
-    /,
-    *,
-    as_any: bool = ...,
-    dtype: None = None,
-    copy: bool = ...,
-    must_be_real: bool = ...,
-) -> npt.NDArray[np.bool_]: ...
+def _cast_to_numpy(arr: bool | _NestedBool, /, *, as_any: bool = ..., dtype: None = None, copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[np.bool_]: ...  # type: ignore[overload-overlap]
 @overload
-def _cast_to_numpy(
-    arr: int | _NestedInt,
-    /,
-    *,
-    as_any: bool = ...,
-    dtype: None = None,
-    copy: bool = ...,
-    must_be_real: bool = ...,
-) -> npt.NDArray[np.int64]: ...
+def _cast_to_numpy(arr: int | _NestedInt, /, *, as_any: bool = ..., dtype: None = None, copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[np.int64]: ...
 @overload
-def _cast_to_numpy(
-    arr: float | _NestedFloat,
-    /,
-    *,
-    as_any: bool = ...,
-    dtype: None = None,
-    copy: bool = ...,
-    must_be_real: bool = ...,
-) -> npt.NDArray[np.float64]: ...
+def _cast_to_numpy(arr: float | _NestedFloat, /, *, as_any: bool = ..., dtype: None = None, copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[np.float64]: ...
 @overload
-def _cast_to_numpy(  # type: ignore[overload-overlap]
-    arr: _ArrayLikeOrScalar,
-    /,
-    *,
-    as_any: bool = ...,
-    dtype: type[_ScalarT],
-    copy: bool = ...,
-    must_be_real: bool = ...,
-) -> npt.NDArray[_ScalarT]: ...
+def _cast_to_numpy(arr: _ArrayLikeOrScalar, /, *, as_any: bool = ..., dtype: type[_ScalarT], copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[_ScalarT]: ...  # type: ignore[overload-overlap]
 @overload
-def _cast_to_numpy(  # type: ignore[overload-overlap]
-    arr: _ArrayLikeOrScalar,
-    /,
-    *,
-    as_any: bool = ...,
-    dtype: type[bool],
-    copy: bool = ...,
-    must_be_real: bool = ...,
-) -> npt.NDArray[np.bool_]: ...
+def _cast_to_numpy(arr: _ArrayLikeOrScalar, /, *, as_any: bool = ..., dtype: type[bool], copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[np.bool_]: ...  # type: ignore[overload-overlap]
 @overload
-def _cast_to_numpy(
-    arr: _ArrayLikeOrScalar,
-    /,
-    *,
-    as_any: bool = ...,
-    dtype: type[int],
-    copy: bool = ...,
-    must_be_real: bool = ...,
-) -> npt.NDArray[np.int64]: ...
+def _cast_to_numpy(arr: _ArrayLikeOrScalar, /, *, as_any: bool = ..., dtype: type[int], copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[np.int64]: ...
 @overload
-def _cast_to_numpy(
-    arr: _ArrayLikeOrScalar,
-    /,
-    *,
-    as_any: bool = ...,
-    dtype: type[float],
-    copy: bool = ...,
-    must_be_real: bool = ...,
-) -> npt.NDArray[np.float64]: ...
+def _cast_to_numpy(arr: _ArrayLikeOrScalar, /, *, as_any: bool = ..., dtype: type[float], copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[np.float64]: ...
 @overload
-def _cast_to_numpy(
-    arr: _ArrayLikeOrScalar,
-    /,
-    *,
-    as_any: bool = ...,
-    dtype: _DTypeLike | None = None,
-    copy: bool = ...,
-    must_be_real: bool = ...,
-) -> npt.NDArray[_Scalar]: ...
+def _cast_to_numpy(arr: _ArrayLikeOrScalar, /, *, as_any: bool = ..., dtype: _DTypeLike | None = None, copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[_Scalar]: ...
+# fmt: on
 def _cast_to_numpy(
     arr: _ArrayLikeOrScalar,
     /,
