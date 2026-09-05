@@ -5,11 +5,14 @@ Set ``PYVISTA_VALIDATION_ACCELERATE=0`` to stay on the pure Python implementatio
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from collections.abc import Iterable
 import inspect
 import os
+from typing import TYPE_CHECKING
 from typing import Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from collections.abc import Iterable
 
 _wrap: Callable[[Any, str, str, str], Any] | None = None
 
