@@ -1970,18 +1970,20 @@ def validate_dimensionality(
     kwargs.setdefault('to_list', True)
     kwargs.setdefault('must_be_finite', True)
     kwargs.setdefault('must_be_in_range', [0, 3])
+    kwargs.setdefault('dtype_out', int)
+    _set_default_kwarg_mandatory(cast('dict[str, object]', kwargs), 'must_be_integer', True)
 
     as_array = _asarray_any(dimensionality)
     if as_array.dtype.kind == 'U':
-        as_array = np.char.replace(as_array.astype(np.str_), 'D', '')
-    try:
-        as_integers = as_array.astype(np.int64)
-    except ValueError:
-        msg = (
-            f'`{dimensionality}` is not a valid dimensionality.'
-            ' Use one of [0, 1, 2, 3, "0D", "1D", "2D", "3D"].'
-        )
-        raise ValueError(msg) from None
+        # An alias such as '2D' is its number without the suffix
+        try:
+            as_array = np.char.replace(as_array.astype(np.str_), 'D', '').astype(np.int64)
+        except ValueError:
+            msg = (
+                f'`{dimensionality}` is not a valid dimensionality.'
+                ' Use one of [0, 1, 2, 3, "0D", "1D", "2D", "3D"].'
+            )
+            raise ValueError(msg) from None
 
     shape: _ShapeLike | list[_ShapeLike]
     if reshape:
@@ -1991,7 +1993,9 @@ def validate_dimensionality(
         shape = ()
     _set_default_kwarg_mandatory(cast('dict[str, object]', kwargs), 'must_have_shape', shape)
 
-    return cast('_DimensionalityOut', validate_array(as_integers, **kwargs))
+    return cast(
+        '_DimensionalityOut', validate_array(cast('npt.NDArray[_Scalar]', as_array), **kwargs)
+    )
 
 
 def _asarray_any(obj: object, /) -> npt.NDArray[np.generic[object]]:

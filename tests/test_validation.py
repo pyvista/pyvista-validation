@@ -2080,11 +2080,22 @@ def test_validate_dimensionality_rejects_an_out_of_range_alias():
         validate_dimensionality('4D')
 
 
-@pytest.mark.xfail(strict=True, reason='non-integer values are truncated before validation')
-@pytest.mark.parametrize('dimensionality', [2.5, -0.5])
-def test_validate_dimensionality_rejects_non_integers(dimensionality):
-    with pytest.raises(ValueError, match='integer'):
+@pytest.mark.parametrize(
+    ('dimensionality', 'match'),
+    [
+        (2.5, 'Dimensionality must have integer-like values'),
+        (-0.5, 'Dimensionality must have integer-like values'),
+        (np.nan, 'Dimensionality must have finite values'),
+    ],
+)
+def test_validate_dimensionality_rejects_non_integers(dimensionality, match):
+    with pytest.raises(ValueError, match=match):
         validate_dimensionality(dimensionality)
+
+
+def test_validate_dimensionality_rejects_a_boolean():
+    with pytest.raises(TypeError, match='Dimensionality must have real numbers'):
+        validate_dimensionality(True)
 
 
 # --- check functions ---
