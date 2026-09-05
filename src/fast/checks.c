@@ -323,7 +323,7 @@ static params ITEMS_PARAMS = {ITEMS_NAMES, NULL, 4, 2, 1};
 static const char *const CONTAINS_NAMES[] = {"container", "must_contain", "name"};
 static params CONTAINS_PARAMS = {CONTAINS_NAMES, NULL, 3, 2, 1};
 
-/* check_instance insists on a string name before anything else. */
+/* The public functions raise on a non-string name before any other check. */
 static int name_ok(PyObject *name)
 {
     return name == NULL || PyUnicode_Check(name);

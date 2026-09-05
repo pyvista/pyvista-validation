@@ -1871,7 +1871,7 @@ def test_validate_arrayN_unsigned_constraints_cannot_be_disabled(kwarg):  # noqa
 
 
 def test_validate_arrayN_unsigned_rejects_values_the_dtype_cannot_hold():  # noqa: N802
-    # The default output dtype is the platform's int, which is 32-bit on some
+    # The default output dtype is the platform's int, which is not 64 bits everywhere
     limit = np.iinfo(np.dtype(int)).max
     with pytest.raises(ValueError, match=f'less than or equal to {limit}'):
         validate_arrayN_unsigned([limit + 1])

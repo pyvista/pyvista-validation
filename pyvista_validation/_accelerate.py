@@ -31,7 +31,7 @@ if not disabled(os.environ.get('PYVISTA_VALIDATION_ACCELERATE')):
 
 # Whether the C fast paths are in use.
 enabled = _wrap is not None
-# The Python implementations, by name, whichever object the public name is bound to.
+# The Python implementations, by name.
 reference: dict[str, Callable[..., Any]] = {}
 
 
