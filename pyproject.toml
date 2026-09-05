@@ -139,6 +139,7 @@ ignore = ['D203', 'D211', 'D213']
 'tests/*' = ['D103']
 # Overload stubs are one line each, kept out of the formatter with `fmt: off`.
 'pyvista_validation/_cast_array.py' = ['E501']
+'pyvista_validation/check.py' = ['E501']
 'pyvista_validation/validate.py' = ['E501']
 
 [tool.ruff.lint.isort]

@@ -1457,3 +1457,37 @@ def test_typing_aliases_are_subscriptable(scalar_type):
         assert alias[scalar_type] != alias
     assert _typing.NumberType.__default__ is float
     assert _typing.NumpyArray[np.float32] != _typing.NumpyArray
+
+
+@pytest.mark.parametrize(
+    ('check', 'args', 'kwargs'),
+    [
+        (check_subdtype, (np.floating,), {}),
+        (check_real, (), {}),
+        (check_sorted, (), {}),
+        (check_finite, (), {}),
+        (check_integer, (), {}),
+        (check_nonnegative, (), {}),
+        (check_greater_than, (-1,), {}),
+        (check_less_than, (10,), {}),
+        (check_range, ([0, 10],), {}),
+        (check_shape, (2,), {}),
+        (check_ndim, (1,), {}),
+        (check_sequence, (), {}),
+        (check_iterable, (), {}),
+        (check_instance, (list,), {}),
+        (check_type, (list,), {}),
+        (check_iterable_items, (float,), {}),
+        (check_length, (), {'exact_length': 2}),
+    ],
+)
+def test_check_functions_return_their_input(check, args, kwargs):
+    array = [1.0, 2.0]
+    assert check(array, *args, **kwargs) is array
+
+
+def test_scalar_check_functions_return_their_input():
+    number = 1.5
+    assert check_number(number) is number
+    assert check_string('abc') == 'abc'
+    assert check_contains([1, 2], must_contain=2) == 2

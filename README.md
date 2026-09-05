@@ -37,7 +37,8 @@ A **`check`** function:
 
 * Performs a simple validation on a single input variable.
 * Raises an error if the check fails due to invalid input.
-* Does not modify input or return anything.
+* Does not modify its input, and returns it unchanged, typed as what the check
+  established, so a check can be used inline.
 
 A **`validate`** function:
 
