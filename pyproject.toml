@@ -3,7 +3,15 @@ build-backend = 'setuptools.build_meta'
 requires = ['setuptools>=64', 'setuptools_scm>=8']
 
 [dependency-groups]
-dev = ['pre-commit', 'pytest', 'pytest-cov']
+dev = [
+  'lxml',
+  'mypy',
+  'pre-commit',
+  'pytest',
+  'pytest-cov',
+  'scipy-stubs',
+  'type-assert==0.2.1',
+]
 docs = [
   'numpydoc==1.10.0',
   'sphinx-book-theme==1.1.4',
@@ -31,7 +39,10 @@ classifiers = [
   'Topic :: Software Development :: Libraries :: Python Modules',
   'Typing :: Typed',
 ]
-dependencies = ['numpy>=1.21.0']
+dependencies = [
+  'numpy>=1.21.0',
+  'typing-extensions>=4.4; python_version < "3.13"',
+]
 description = 'Validate and standardize array-like input.'
 dynamic = ['version']
 keywords = ['array', 'numpy', 'validation']
@@ -62,9 +73,20 @@ omit = ['*/_version.py', 'pyvista_validation/_typing/*']
 parallel = true
 source = ['pyvista_validation']
 
+[tool.coverage.report]
+# Overload stubs are signatures for type checkers; their bodies never run.
+exclude_also = ['^\\s*@overload$']
+
+[tool.mypy]
+enable_error_code = ['ignore-without-code', 'redundant-expr', 'truthy-bool']
+packages = ['pyvista_validation']
+strict = true
+warn_unreachable = true
+
 [tool.pytest.ini_options]
 addopts = '--cov=pyvista_validation --cov-fail-under=95'
 testpaths = 'tests'
+type_assert_cases = 'tests/typing/cases'
 
 [tool.ruff]
 indent-width = 4
@@ -115,6 +137,9 @@ ignore = ['D203', 'D211', 'D213']
 # a TypeVar on Python 3.10.
 'pyvista_validation/_typing/*' = ['UP007']
 'tests/*' = ['D103']
+# Overload stubs are one line each, kept out of the formatter with `fmt: off`.
+'pyvista_validation/_cast_array.py' = ['E501']
+'pyvista_validation/validate.py' = ['E501']
 
 [tool.ruff.lint.isort]
 combine-as-imports = true

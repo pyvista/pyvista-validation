@@ -1,82 +1,153 @@
-"""Generic array-like type definitions.
+"""Array-like type definitions.
 
-Definitions here are loosely based on code in ``numpy._typing._array_like``.
-Some key differences include:
-
-- Some npt._array_like definitions explicitly support dual-types for
-  handling Python and NumPy scalar data types separately.
-  Here, only a single generic type is used for simplicity.
-
-- The npt._array_like definitions use a recursive _NestedSequence protocol.
-  Here, finite sequences are used instead.
-
-- The npt._array_like definitions use a generic _SupportsArray protocol.
-  Here, we use ``ndarray`` directly.
-
-- The npt._array_like definitions include scalar types (for example, float, int).
-  Here they are excluded (that is, scalars are not considered to be arrays).
-
-- The npt._array_like TypeVar is bound to np.generic. Here, the
-  TypeVar is bound to a subset of numeric types only.
-
+The array-like aliases are generic over ``NumberType``, the Python scalar type of a
+sequence's items, which defaults to ``float`` so that ``ArrayLike`` and
+``ArrayLike[float]`` are the same type. NumPy arrays of any numeric dtype are
+accepted whatever the parameter, since a dtype is not a Python scalar type.
+``np.float64`` items are accepted through their ``float`` subclass, and ``int``
+and ``bool`` items through numeric promotion.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TypeVar
+import sys
+from typing import TYPE_CHECKING
+from typing import TypeAlias
 from typing import Union
 
 import numpy as np
 import numpy.typing as npt
 
-# Define numeric types
-NumberType = TypeVar(
-    'NumberType',
-    bound=np.floating | np.integer | np.bool_ | float | int | bool,
+if sys.version_info >= (3, 13):
+    from typing import TypeVar
+else:
+    # Type variable defaults (PEP 696) reached the standard library in 3.13.
+    from typing_extensions import TypeVar
+
+# Every NumPy scalar type this package produces or preserves.
+_Scalar = (
+    np.float64
+    | np.float32
+    | np.float16
+    | np.int64
+    | np.int32
+    | np.int16
+    | np.int8
+    | np.uint64
+    | np.uint32
+    | np.uint16
+    | np.uint8
+    | np.bool_
+)
+_Floating = np.float64 | np.float32 | np.float16
+_Integer = np.int64 | np.int32 | np.int16 | np.int8 | np.uint64 | np.uint32 | np.uint16 | np.uint8
+
+# Anything np.dtype() accepts for numeric data: a scalar type, a dtype, or a dtype name.
+if TYPE_CHECKING:
+    from typing_extensions import Never
+
+    # Empty list literals, which NumPy turns into float64 arrays; only a type checker
+    # can tell them apart from other lists, so the runtime value is a placeholder.
+    _EmptyList: TypeAlias = (
+        list[Never] | list[list[Never]] | list[list[list[Never]]] | list[list[list[list[Never]]]]
+    )
+    _DTypeLike: TypeAlias = (
+        type[np.generic[object] | float | int | bool] | np.dtype[np.generic[object]] | str
+    )
+else:
+    _DTypeLike = npt.DTypeLike
+    _EmptyList = list
+
+# For overload signatures that return the same dtype they are given; used bare, it is any
+# of them.
+_ScalarT = TypeVar('_ScalarT', bound=_Scalar, default=_Scalar)
+NumpyArray = npt.NDArray[_ScalarT]
+
+# The Python scalar type of a sequence's items. Its default makes a bare ``ArrayLike`` mean
+# ``ArrayLike[float]``, which accepts ints and bools as well through numeric promotion.
+NumberType = TypeVar('NumberType', bound=float, default=float)
+Number = float
+
+_NestedBool = (
+    Sequence[bool]
+    | Sequence[Sequence[bool]]
+    | Sequence[Sequence[Sequence[bool]]]
+    | Sequence[Sequence[Sequence[Sequence[bool]]]]
+)
+_NestedInt = (
+    Sequence[int]
+    | Sequence[Sequence[int]]
+    | Sequence[Sequence[Sequence[int]]]
+    | Sequence[Sequence[Sequence[Sequence[int]]]]
+)
+_NestedFloat = (
+    Sequence[float]
+    | Sequence[Sequence[float]]
+    | Sequence[Sequence[Sequence[float]]]
+    | Sequence[Sequence[Sequence[Sequence[float]]]]
 )
 
-# Create a copy of the typevar which can be used for annotating a second variable.
-# Its definition should be identical to `NumberType`
-_NumberType = TypeVar(  # noqa: PYI018
-    '_NumberType',
-    bound=np.floating | np.integer | np.bool_ | float | int | bool,
+# What ndarray.tolist() returns for each dtype family, up to four dimensions.
+_NestedListBool = (
+    list[bool] | list[list[bool]] | list[list[list[bool]]] | list[list[list[list[bool]]]]
 )
-
-NumpyArray = npt.NDArray[NumberType]
-
-_FiniteNestedList = (
-    list[NumberType]
-    | list[list[NumberType]]
-    | list[list[list[NumberType]]]
-    | list[list[list[list[NumberType]]]]
+_NestedListInt = list[int] | list[list[int]] | list[list[list[int]]] | list[list[list[list[int]]]]
+_NestedListFloat = (
+    list[float] | list[list[float]] | list[list[list[float]]] | list[list[list[list[float]]]]
 )
-_FiniteNestedTuple = (
-    tuple[NumberType]
-    | tuple[tuple[NumberType]]
-    | tuple[tuple[tuple[NumberType]]]
-    | tuple[tuple[tuple[tuple[NumberType]]]]
+_NestedTupleBool = (
+    tuple[bool, ...]
+    | tuple[tuple[bool, ...], ...]
+    | tuple[tuple[tuple[bool, ...], ...], ...]
+    | tuple[tuple[tuple[tuple[bool, ...], ...], ...], ...]
 )
+_NestedTupleInt = (
+    tuple[int, ...]
+    | tuple[tuple[int, ...], ...]
+    | tuple[tuple[tuple[int, ...], ...], ...]
+    | tuple[tuple[tuple[tuple[int, ...], ...], ...], ...]
+)
+_NestedTupleFloat = (
+    tuple[float, ...]
+    | tuple[tuple[float, ...], ...]
+    | tuple[tuple[tuple[float, ...], ...], ...]
+    | tuple[tuple[tuple[tuple[float, ...], ...], ...], ...]
+)
+_FiniteNestedList = _NestedListFloat
+_FiniteNestedTuple = _NestedTupleFloat
 
+# What converting an array of each dtype family to lists or tuples produces; 0-D gives a scalar.
+_ToListBool = bool | _NestedListBool
+_ToListInt = int | _NestedListInt
+_ToListFloat = float | _NestedListFloat
+_ToList = _ToListBool | _ToListInt | _ToListFloat
+_ToTupleBool = bool | _NestedTupleBool
+_ToTupleInt = int | _NestedTupleInt
+_ToTupleFloat = float | _NestedTupleFloat
+_ToTuple = _ToTupleBool | _ToTupleInt | _ToTupleFloat
+
+# Sequences may mix Python and NumPy scalars, or hold arrays as their innermost items.
+# Spelled with ``Union`` because a ``types.UnionType`` cannot be subscripted on Python 3.10.
 _ArrayLike1D = Union[
-    NumpyArray[NumberType],
-    Sequence[NumberType],
-    Sequence[NumpyArray[NumberType]],
+    npt.NDArray[_Scalar],
+    Sequence[Union[NumberType, _Scalar]],
+    Sequence[npt.NDArray[_Scalar]],
 ]
 _ArrayLike2D = Union[
-    NumpyArray[NumberType],
-    Sequence[Sequence[NumberType]],
-    Sequence[Sequence[NumpyArray[NumberType]]],
+    npt.NDArray[_Scalar],
+    Sequence[Sequence[Union[NumberType, _Scalar]]],
+    Sequence[Sequence[npt.NDArray[_Scalar]]],
 ]
 _ArrayLike3D = Union[
-    NumpyArray[NumberType],
-    Sequence[Sequence[Sequence[NumberType]]],
-    Sequence[Sequence[Sequence[NumpyArray[NumberType]]]],
+    npt.NDArray[_Scalar],
+    Sequence[Sequence[Sequence[Union[NumberType, _Scalar]]]],
+    Sequence[Sequence[Sequence[npt.NDArray[_Scalar]]]],
 ]
 _ArrayLike4D = Union[
-    NumpyArray[NumberType],
-    Sequence[Sequence[Sequence[Sequence[NumberType]]]],
-    Sequence[Sequence[Sequence[Sequence[NumpyArray[NumberType]]]]],
+    npt.NDArray[_Scalar],
+    Sequence[Sequence[Sequence[Sequence[Union[NumberType, _Scalar]]]]],
+    Sequence[Sequence[Sequence[Sequence[npt.NDArray[_Scalar]]]]],
 ]
 _ArrayLike = Union[
     _ArrayLike1D[NumberType],

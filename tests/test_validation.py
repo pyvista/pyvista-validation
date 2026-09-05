@@ -1441,3 +1441,19 @@ def test_check_ndim_rejects_a_wrong_number_of_dimensions(array):
 
 def test_check_iterable_items_accepts_an_empty_iterable():
     check_iterable_items([], int)
+
+
+@pytest.mark.parametrize('scalar_type', [float, int, bool])
+def test_typing_aliases_are_subscriptable(scalar_type):
+    from pyvista_validation import _typing
+
+    aliases = (
+        _typing.ArrayLike,
+        _typing.VectorLike,
+        _typing.MatrixLike,
+        _typing._ArrayLikeOrScalar,
+    )
+    for alias in aliases:
+        assert alias[scalar_type] != alias
+    assert _typing.NumberType.__default__ is float
+    assert _typing.NumpyArray[np.float32] != _typing.NumpyArray

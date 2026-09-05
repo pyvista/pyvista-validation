@@ -15,8 +15,9 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import os
+import sys
 from typing import TYPE_CHECKING
-from typing import Any
+from typing import cast
 
 if TYPE_CHECKING:
     from scipy.spatial.transform import Rotation
@@ -34,7 +35,7 @@ _VTK_SUBMODULES = {
 }
 
 
-def _placeholder(name: str) -> type:
+def _placeholder(name: str) -> type[object]:
     """Return a class nothing is an instance of, standing in for a missing package.
 
     Unlike ``None`` or an empty tuple it still composes into the ``Union`` type aliases.
@@ -52,7 +53,7 @@ def _vtk_root() -> str:
     return 'vtkmodules'
 
 
-def _import_vtk(name: str) -> Any:
+def _import_vtk(name: str) -> type[object]:
     """Import a VTK class from the active backend, or a placeholder without one."""
     root = _vtk_root()
     try:
@@ -61,19 +62,21 @@ def _import_vtk(name: str) -> Any:
         return _placeholder(name)
     # Flat backends resolve classes by name off the root; stock VTK needs the submodule.
     if hasattr(package, name):
-        return getattr(package, name)
-    return getattr(importlib.import_module(f'{root}.{_VTK_SUBMODULES[name]}'), name)
+        return cast('type[object]', getattr(package, name))
+    return cast(
+        'type[object]', getattr(importlib.import_module(f'{root}.{_VTK_SUBMODULES[name]}'), name)
+    )
 
 
-def _import_scipy(name: str) -> Any:
+def _import_scipy(name: str) -> type[object]:
     """Import a SciPy class, or a placeholder when SciPy is not installed."""
     try:
-        return getattr(importlib.import_module(_SCIPY_MODULES[name]), name)
+        return cast('type[object]', getattr(importlib.import_module(_SCIPY_MODULES[name]), name))
     except ModuleNotFoundError:
         return _placeholder(name)
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> type[object]:
     """Resolve a name from its optional dependency, caching it for next time."""
     if name in _VTK_SUBMODULES:
         value = _import_vtk(name)
@@ -83,5 +86,5 @@ def __getattr__(name: str) -> Any:
         msg = f'module {__name__!r} has no attribute {name!r}'
         raise AttributeError(msg)
 
-    globals()[name] = value  # __getattr__ only runs on a miss, so this caches
+    setattr(sys.modules[__name__], name, value)  # __getattr__ only runs on a miss, so this caches
     return value

@@ -29,6 +29,9 @@ pygments_style = 'sphinx'
 # -- API generation ---------------------------------------------------------
 
 autosummary_generate = True
+# Types are documented in the numpydoc Parameters sections; with hints in signatures autodoc
+# would list every overload of a function instead of its one implementation signature.
+autodoc_typehints = 'none'
 # The class-members table numpydoc adds is redundant with the autosummary pages.
 numpydoc_show_class_members = False
 
