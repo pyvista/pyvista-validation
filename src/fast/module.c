@@ -161,6 +161,7 @@ typedef struct {
 } entry;
 
 static const entry TABLE[] = {
+    {"validate_array", fast_validate_array},
     {NULL, NULL},
 };
 
@@ -258,8 +259,7 @@ static PyObject *import_attribute(const char *module, const char *attribute)
     return value;
 }
 
-static params *ALL_PARAMS[64];
-static int N_PARAMS;
+static params *ALL_PARAMS[] = {&ARRAY_PARAMS};
 
 PyMODINIT_FUNC PyInit__fast(void)
 {
@@ -278,7 +278,7 @@ PyMODINIT_FUNC PyInit__fast(void)
         cache.np_broadcast_to == NULL || cache.np_generic == NULL) {
         return NULL;
     }
-    for (int i = 0; i < N_PARAMS; i++) {
+    for (size_t i = 0; i < sizeof(ALL_PARAMS) / sizeof(ALL_PARAMS[0]); i++) {
         if (intern(ALL_PARAMS[i]) < 0) {
             return NULL;
         }
