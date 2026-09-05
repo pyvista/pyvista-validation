@@ -112,6 +112,18 @@ def assert_same(fast, slow, *args, **kwargs):
     """Assert that the accelerated and the pure call agree."""
     expected = outcome(slow, *args, **kwargs)
     actual = outcome(fast, *args, **kwargs)
+    compare(actual, expected)
+
+
+def assert_same_fresh(fast, slow, make, *args, **kwargs):
+    """Assert agreement on an input that each call must get fresh, like an iterator."""
+    expected = outcome(slow, make(), *args, **kwargs)
+    actual = outcome(fast, make(), *args, **kwargs)
+    compare(actual, expected)
+
+
+def compare(actual, expected):
+    """Assert that two outcomes are the same result or the same error."""
     if expected[0] == 'raised':
         assert actual == expected
     else:
@@ -303,7 +315,8 @@ class StrSubclass(str):
 
 
 OBJECTS = [
-    lambda: 0, lambda: 1.5, lambda: True, lambda: 1 + 1j, lambda: np.float64(1), lambda: np.int8(1),
+    lambda: 0, lambda: 1.5, lambda: True, lambda: 1 + 1j, lambda: np.float64(1),
+    lambda: np.int8(1),
     lambda: np.True_, lambda: np.array(1), lambda: np.array([1, 2]), lambda: 'a', lambda: b'a',
     lambda: StrSubclass('x'), lambda: [1], lambda: [1, 'a'], lambda: (1,), lambda: range(2),
     lambda: {1}, lambda: {1: 2}, lambda: None, lambda: object(), lambda: iter([1, 2]),
@@ -319,25 +332,24 @@ CONTAINERS = [lambda: [1, 2], lambda: (1, 2), lambda: {1, 2}, lambda: {1: 'a'}, 
 
 @pytest.mark.parametrize('make', OBJECTS)
 def test_object_checks_agree(make, pure):
+    same = assert_same_fresh
     for name in ('x', 5):
-        assert_same(pyvista_validation.check_number, pure.check_number, make(), name=name)
-        assert_same(pyvista_validation.check_sequence, pure.check_sequence, make(), name=name)
-        assert_same(pyvista_validation.check_iterable, pure.check_iterable, make(), name=name)
+        same(pyvista_validation.check_number, pure.check_number, make, name=name)
+        same(pyvista_validation.check_sequence, pure.check_sequence, make, name=name)
+        same(pyvista_validation.check_iterable, pure.check_iterable, make, name=name)
         for allow_subclass in (True, False):
-            assert_same(
-                pyvista_validation.check_string, pure.check_string, make(),
+            same(
+                pyvista_validation.check_string, pure.check_string, make,
                 allow_subclass=allow_subclass, name=name,
             )  # fmt: skip
             for classinfo in CLASSINFOS:
-                assert_same(
-                    pyvista_validation.check_instance, pure.check_instance, make(), classinfo,
+                same(
+                    pyvista_validation.check_instance, pure.check_instance, make, classinfo,
                     allow_subclass=allow_subclass, name=name,
                 )  # fmt: skip
-                assert_same(
-                    pyvista_validation.check_type, pure.check_type, make(), classinfo, name=name
-                )
-                assert_same(
-                    pyvista_validation.check_iterable_items, pure.check_iterable_items, make(),
+                same(pyvista_validation.check_type, pure.check_type, make, classinfo, name=name)
+                same(
+                    pyvista_validation.check_iterable_items, pure.check_iterable_items, make,
                     classinfo, allow_subclass=allow_subclass, name=name,
                 )  # fmt: skip
 
