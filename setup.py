@@ -28,7 +28,10 @@ setup(
                 # Built against NumPy 2, loadable on every NumPy the package supports.
                 ('NPY_TARGET_VERSION', 'NPY_1_21_API_VERSION'),
             ],
-            extra_compile_args=['/O2'] if sys.platform == 'win32' else ['-O3'],
+            # No fused multiply-add: the axes and rotation checks must round like NumPy
+            extra_compile_args=['/O2']
+            if sys.platform == 'win32'
+            else ['-O3', '-ffp-contract=off'],
             py_limited_api=True,
             optional=True,
         )

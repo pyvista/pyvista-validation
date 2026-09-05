@@ -725,3 +725,241 @@ static PyObject *fast_validate_transform4x4(PyObject *const *args, Py_ssize_t na
     }
     return matrix;
 }
+
+/* ---- Axes and rotations ---------------------------------------------------------------- */
+
+static const char *const AXES_NAMES[] = {
+    "normalize", "must_be_orthogonal", "must_have_orientation", "name",
+};
+static params AXES_PARAMS = {AXES_NAMES, NULL, 4, 0, 0};
+static const char *const ROTATION_NAMES[] = {"rotation", "must_have_handedness", "tolerance", "name"};
+static params ROTATION_PARAMS = {ROTATION_NAMES, NULL, 4, 2, 0};
+
+/* np.isclose with its default tolerances. */
+static inline int isclose(double a, double b)
+{
+    return fabs(a - b) <= 1e-8 + 1e-5 * fabs(b);
+}
+
+/* np.allclose of two 3-vectors. */
+static int allclose3(const double *a, const double *b)
+{
+    return isclose(a[0], b[0]) && isclose(a[1], b[1]) && isclose(a[2], b[2]);
+}
+
+static void cross3(const double *a, const double *b, double *out)
+{
+    out[0] = a[1] * b[2] - a[2] * b[1];
+    out[1] = a[2] * b[0] - a[0] * b[2];
+    out[2] = a[0] * b[1] - a[1] * b[0];
+}
+
+static double dot3(const double *a, const double *b)
+{
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+/* The values of a real array as doubles, in C order. 0 when there are not `count` of them. */
+static int read_doubles(PyObject *array, double *out, int count)
+{
+    PyObject *doubles = PyArray_FromArray((PyArrayObject *)array, PyArray_DescrFromType(NPY_DOUBLE),
+                                          NPY_ARRAY_CARRAY_RO | NPY_ARRAY_FORCECAST);
+    if (doubles == NULL) {
+        PyErr_Clear();
+        return 0;
+    }
+    int ok = PyArray_SIZE((PyArrayObject *)doubles) == count;
+    if (ok) {
+        memcpy(out, PyArray_DATA((PyArrayObject *)doubles), count * sizeof(double));
+    }
+    Py_DECREF(doubles);
+    return ok;
+}
+
+/* 'right' as 1, 'left' as -1, None as 0, and -2 for anything else. */
+static int handedness(PyObject *obj, int missing)
+{
+    if (obj == NULL) {
+        return missing;
+    }
+    if (obj == Py_None) {
+        return 0;
+    }
+    if (PyUnicode_Check(obj)) {
+        if (PyUnicode_CompareWithASCIIString(obj, "right") == 0) {
+            return 1;
+        }
+        if (PyUnicode_CompareWithASCIIString(obj, "left") == 0) {
+            return -1;
+        }
+    }
+    return -2;
+}
+
+/* A fresh float64 3x3 array holding `values`. */
+static PyObject *matrix_3x3(const double *values)
+{
+    npy_intp dims[2] = {3, 3};
+    PyObject *array = PyArray_SimpleNew(2, dims, NPY_DOUBLE);
+    if (array != NULL) {
+        memcpy(PyArray_DATA((PyArrayObject *)array), values, 9 * sizeof(double));
+    }
+    return array;
+}
+
+static PyObject *fast_validate_axes(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[4];
+    if (nargs < 1 || nargs > 3 || bind(&AXES_PARAMS, args + nargs, 0, kwnames, a) < 0) {
+        RETURN_FALLBACK;
+    }
+    int normalize = truth(a[0], 1), orthogonal = truth(a[1], 1);
+    int orientation = handedness(a[2], 1);
+    if (normalize < 0 || orthogonal < 0 || orientation == -2 || (orientation == 0 && nargs == 2)) {
+        PyErr_Clear();
+        RETURN_FALLBACK;
+    }
+
+    PyObject *axes_array;
+    if (nargs == 1) {
+        axes_array = shaped_array(args[0], THREE_BY_THREE, 0);
+        if (axes_array == FALLBACK) {
+            return axes_array;
+        }
+    }
+    else {
+        /* Each vector through validate_array3, assigned into a float64 row */
+        npy_intp dims[2] = {3, 3};
+        axes_array = PyArray_ZEROS(2, dims, NPY_DOUBLE, 0);
+        if (axes_array == NULL) {
+            return NULL;
+        }
+        double *vectors = (double *)PyArray_DATA((PyArrayObject *)axes_array);
+        for (Py_ssize_t i = 0; i < nargs; i++) {
+            PyObject *b[A_COUNT] = {NULL};
+            b[A_ARR] = args[i];
+            b[A_SHAPE] = spec.three_shapes[1];
+            b[A_RESHAPE] = spec.flat;
+            PyObject *row = array_core(b);
+            int ok = row != FALLBACK && row != NULL && read_doubles(row, vectors + 3 * i, 3);
+            Py_XDECREF(row);
+            if (!ok) {
+                Py_DECREF(axes_array);
+                RETURN_FALLBACK;
+            }
+        }
+        if (nargs == 2) {
+            double third[3];
+            cross3(vectors, vectors + 3, third);
+            int zero_third = isclose(third[0], 0) && isclose(third[1], 0) && isclose(third[2], 0);
+            int zero_first = isclose(vectors[0], 0) && isclose(vectors[1], 0) && isclose(vectors[2], 0);
+            int zero_second = isclose(vectors[3], 0) && isclose(vectors[4], 0) && isclose(vectors[5], 0);
+            if (zero_third && !zero_first && !zero_second) {
+                Py_DECREF(axes_array);
+                RETURN_FALLBACK;
+            }
+            if (orientation == 1) {
+                memcpy(vectors + 6, third, sizeof third);
+            }
+            else {
+                cross3(vectors + 3, vectors, vectors + 6);
+            }
+        }
+    }
+
+    values_spec finite = {0, 1, 0, 0, 0};
+    double m[9];
+    if (values_ok((PyArrayObject *)axes_array, &finite) != 1 || !read_doubles(axes_array, m, 9)) {
+        Py_DECREF(axes_array);
+        RETURN_FALLBACK;
+    }
+    double norms[3], n[9];
+    for (int i = 0; i < 3; i++) {
+        const double *row = m + 3 * i;
+        if (isclose(row[0], 0) && isclose(row[1], 0) && isclose(row[2], 0)) {
+            Py_DECREF(axes_array);
+            RETURN_FALLBACK;
+        }
+        norms[i] = sqrt(row[0] * row[0] + row[1] * row[1] + row[2] * row[2]);
+        for (int j = 0; j < 3; j++) {
+            n[3 * i + j] = row[j] / norms[i];
+        }
+    }
+    const double *n0 = n, *n1 = n + 3, *n2 = n + 6;
+    if (isclose(fabs(dot3(n0, n1)), 1) || isclose(fabs(dot3(n0, n2)), 1) ||
+        isclose(fabs(dot3(n1, n2)), 1)) {
+        Py_DECREF(axes_array);
+        RETURN_FALLBACK;
+    }
+    double cross01[3], cross12[3], minus[3];
+    cross3(n0, n1, cross01);
+    cross3(n1, n2, cross12);
+    for (int j = 0; j < 3; j++) {
+        minus[j] = -n2[j];
+    }
+    int is_orthogonal = (allclose3(cross01, n2) || allclose3(cross01, minus));
+    for (int j = 0; j < 3; j++) {
+        minus[j] = -n0[j];
+    }
+    is_orthogonal = is_orthogonal && (allclose3(cross12, n0) || allclose3(cross12, minus));
+    if (orthogonal && !is_orthogonal) {
+        Py_DECREF(axes_array);
+        RETURN_FALLBACK;
+    }
+    if (orientation != 0) {
+        double dot = dot3(cross01, n2);
+        if ((orientation == 1 && dot < 0) || (orientation == -1 && dot > 0)) {
+            Py_DECREF(axes_array);
+            RETURN_FALLBACK;
+        }
+    }
+    if (!normalize) {
+        return axes_array;
+    }
+    Py_DECREF(axes_array);
+    return matrix_3x3(n);
+}
+
+static PyObject *fast_validate_rotation(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[4];
+    if (bind(&ROTATION_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL ||
+        (a[3] != NULL && !PyUnicode_Check(a[3]))) {
+        RETURN_FALLBACK;
+    }
+    int hand = handedness(a[1], 0);
+    double tolerance = 1e-6;
+    if (hand == -2 || (a[2] != NULL && !as_double(a[2], &tolerance))) {
+        RETURN_FALLBACK;
+    }
+    PyObject *matrix = transform3x3(a[0], 1);
+    if (matrix == FALLBACK || matrix == NULL) {
+        return matrix;
+    }
+    double m[9];
+    if (!read_doubles(matrix, m, 9)) {
+        Py_DECREF(matrix);
+        RETURN_FALLBACK;
+    }
+    /* The Frobenius norm of M Mᵀ - I */
+    double sum = 0;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            double entry = dot3(m + 3 * i, m + 3 * j) - (i == j);
+            sum += entry * entry;
+        }
+    }
+    if (!(sqrt(sum) < tolerance)) {
+        Py_DECREF(matrix);
+        RETURN_FALLBACK;
+    }
+    if (hand != 0) {
+        double det = m[0] * (m[4] * m[8] - m[5] * m[7]) - m[1] * (m[3] * m[8] - m[5] * m[6]) +
+                     m[2] * (m[3] * m[7] - m[4] * m[6]);
+        if ((hand == 1 && !(det > 0)) || (hand == -1 && !(det < 0))) {
+            Py_DECREF(matrix);
+            RETURN_FALLBACK;
+        }
+    }
+    return matrix;
+}

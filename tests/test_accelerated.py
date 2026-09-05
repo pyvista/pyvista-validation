@@ -446,3 +446,68 @@ def test_transforms_agree(transform, pure):
                 pyvista_validation.validate_transform3x3, pure.validate_transform3x3, transform,
                 must_be_finite=must_be_finite, name=name,
             )  # fmt: skip
+
+
+def axes_inputs():
+    """Return argument tuples for validate_axes, valid and not."""
+    eye = np.eye(3)
+    left = np.diag([1.0, 1.0, -1.0])
+    bias = eye.copy()
+    bias[0, 1] = 0.1
+    inputs = [
+        (eye,), (2 * eye,), (left,), (bias,), (np.eye(3, dtype=int),), (eye.tolist(),),
+        ([[1, 0, 0], [1, 0, 0], [0, 1, 0]],), ([[2, 0, 0], [1, 0, 0], [0, 0, 1]],),
+        ([[1, 0, 0], [0, 0, 0], [0, 0, 1]],), (np.full((3, 3), np.nan),), (np.eye(3)[:2],),
+        ([1, 0, 0], [0, 1, 0]), ([1, 0, 0], [2, 0, 0]), ([0, 0, 0], [0, 1, 0]),
+        ([1, 0, 0], [[0, 1, 0]], (0, 0, 1)), ([[1], [0], [0]], [0, 1, 0], [0, 0, -1]),
+        ([1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]), ('abc',), (None,),
+        (np.array([[0.6, 0.8, 0], [-0.8, 0.6, 0], [0, 0, 1]]),),
+    ]  # fmt: skip
+    if HAS_SCIPY:
+        inputs.append((Rotation.from_euler('xyz', [10, 20, 30], degrees=True).as_matrix(),))
+    return inputs
+
+
+AXES_OPTIONS = [
+    {},
+    {'normalize': False},
+    {'must_be_orthogonal': False},
+    {'must_have_orientation': 'left'},
+    {'must_have_orientation': None, 'must_be_orthogonal': False},
+    {'must_have_orientation': 'up'},
+    {'normalize': False, 'must_be_orthogonal': False, 'must_have_orientation': None},
+    {'name': 1},
+]
+
+
+@pytest.mark.parametrize('axes', axes_inputs(), ids=str)
+def test_validate_axes_agrees(axes, pure):
+    for options in AXES_OPTIONS:
+        assert_same(pyvista_validation.validate_axes, pure.validate_axes, *axes, **options)
+
+
+def rotation_inputs():
+    """Return inputs for validate_rotation, valid and not."""
+    nearly = np.eye(3)
+    nearly[0, 0] += 1e-4
+    inputs = [
+        np.eye(3), -np.eye(3), 2 * np.eye(3), nearly, np.eye(3, dtype=int), np.eye(3).tolist(),
+        np.eye(4), np.full((3, 3), np.nan), np.array([[0.6, 0.8, 0], [-0.8, 0.6, 0], [0, 0, 1]]),
+        np.array([[0, 1, 0], [1, 0, 0], [0, 0, 1]]), 'abc', None,
+    ]  # fmt: skip
+    if HAS_VTK:
+        inputs.append(vtkMatrix3x3())
+    if HAS_SCIPY:
+        inputs += [Rotation.identity(), Rotation.from_euler('xyz', [10, 20, 30], degrees=True)]
+    return inputs
+
+
+@pytest.mark.parametrize('rotation', rotation_inputs(), ids=lambda x: type(x).__name__)
+def test_validate_rotation_agrees(rotation, pure):
+    for hand in ('right', 'left', None, 'up'):
+        for tolerance in (1e-6, 1e-3, 0, 'a'):
+            for name in ('R', 1):
+                assert_same(
+                    pyvista_validation.validate_rotation, pure.validate_rotation, rotation, hand,
+                    tolerance=tolerance, name=name,
+                )  # fmt: skip

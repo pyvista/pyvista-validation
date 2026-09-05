@@ -191,6 +191,8 @@ static const entry TABLE[] = {
     {"validate_dimensionality", fast_validate_dimensionality},
     {"validate_transform4x4", fast_validate_transform4x4},
     {"validate_transform3x3", fast_validate_transform3x3},
+    {"validate_axes", fast_validate_axes},
+    {"validate_rotation", fast_validate_rotation},
     {NULL, NULL},
 };
 
@@ -295,6 +297,7 @@ static params *ALL_PARAMS[] = {
     &LENGTH_PARAMS,     &NUMBER_PARAMS, &STRING_PARAMS,      &SEQUENCE_PARAMS,
     &ITERABLE_PARAMS,   &INSTANCE_PARAMS, &TYPE_PARAMS,      &ITEMS_PARAMS,
     &CONTAINS_PARAMS,   &FAMILY_PARAMS, &TRANSFORM4X4_PARAMS, &TRANSFORM3X3_PARAMS,
+    &AXES_PARAMS,       &ROTATION_PARAMS,
 };
 
 PyMODINIT_FUNC PyInit__fast(void)
