@@ -1084,8 +1084,6 @@ def validate_transform3x3(
 
     """
     check_string(name, name='Name')
-    if isinstance(transform, _lazy_import.vtkMatrix3x3):
-        return _array_from_vtkmatrix(transform, shape=(3, 3))
     try:
         # VTK and SciPy objects raise TypeError here and are handled below
         return validate_array(
@@ -1094,11 +1092,11 @@ def validate_transform3x3(
             must_be_finite=must_be_finite,
             name=name,
         )
-    except ValueError:
-        pass
     except TypeError:
+        # Not array-like; only now touch the lazy VTK and SciPy imports
+        if isinstance(transform, _lazy_import.vtkMatrix3x3):
+            return _array_from_vtkmatrix(transform, shape=(3, 3))
         if isinstance(transform, _lazy_import.Rotation):
-            # Get matrix output and try validating again
             return validate_transform3x3(
                 transform.as_matrix(), must_be_finite=must_be_finite, name=name
             )

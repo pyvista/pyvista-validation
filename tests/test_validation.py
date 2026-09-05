@@ -136,14 +136,8 @@ def test_validate_transform3x3(transform_like):
 
 
 def test_validate_transform3x3_raises():
-    match = (
-        'Input transform must be one of:'
-        '\n\tvtkMatrix3x3'
-        '\n\t3x3 np.ndarray'
-        '\n\tscipy.spatial.transform.Rotation'
-        "\nGot array([1, 2, 3]) with type <class 'numpy.ndarray'> instead."
-    )
-    with pytest.raises(TypeError, match=re.escape(match)):
+    match = 'Transform has shape (3,) which is not allowed. Shape must be (3, 3).'
+    with pytest.raises(ValueError, match=re.escape(match)):
         validate_transform3x3(np.array([1, 2, 3]))
     match = (
         'Input transform must be one of:'
@@ -1534,10 +1528,6 @@ def test_scalar_check_functions_return_their_input():
 # Behaviour the API documents that the tests above do not pin down. Where the implementation
 # falls short of its documentation, the test is a strict xfail that says how.
 
-XFAIL_VTK_RESOLVED_FOR_ARRAYS = pytest.mark.xfail(
-    strict=True, reason='validate_transform3x3 resolves vtkMatrix3x3 before trying the array'
-)
-
 
 @pytest.mark.parametrize(
     ('kwargs', 'invalid', 'error_type'),
@@ -1971,7 +1961,8 @@ def test_validate_rotation_keeps_the_input_dtype():
 
 
 def test_validate_rotation_rejects_a_4x4():
-    with pytest.raises(TypeError, match='Input transform must be one of'):
+    match = 'Rotation has shape (4, 4) which is not allowed. Shape must be (3, 3).'
+    with pytest.raises(ValueError, match=re.escape(match)):
         validate_rotation(np.eye(4))
 
 
@@ -2038,9 +2029,6 @@ def test_validate_transform4x4_rejects_non_finite_values():
     assert np.isnan(validate_transform4x4(np.full((4, 4), np.nan), must_be_finite=False)).all()
 
 
-@pytest.mark.xfail(
-    strict=True, reason='validate_transform3x3 swallows the ValueError and reports a type error'
-)
 def test_validate_transform3x3_reports_non_finite_values():
     with pytest.raises(ValueError, match=re.escape('Transform must have finite values.')):
         validate_transform3x3(np.full((3, 3), np.nan))
@@ -2318,12 +2306,7 @@ def test_lazy_import_placeholder_when_the_vtk_backend_is_missing(
 
 
 @pytest.mark.parametrize(
-    'function',
-    [
-        validate_transform4x4,
-        pytest.param(validate_transform3x3, marks=XFAIL_VTK_RESOLVED_FOR_ARRAYS),
-        pytest.param(validate_rotation, marks=XFAIL_VTK_RESOLVED_FOR_ARRAYS),
-    ],
+    'function', [validate_transform4x4, validate_transform3x3, validate_rotation]
 )
 def test_array_input_does_not_resolve_optional_dependencies(function, unresolved_lazy_names):
     function(np.eye(3))
