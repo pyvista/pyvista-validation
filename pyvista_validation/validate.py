@@ -1942,17 +1942,6 @@ def validate_arrayNx3(
 ) -> npt.NDArray[_ScalarT]: ...
 @overload
 def validate_arrayNx3(  # type: ignore[overload-overlap]
-    arr: list[Never] | list[list[Never]],
-    /,
-    *,
-    reshape: bool = ...,
-    dtype_out: None = None,
-    to_list: Literal[False] = False,
-    to_tuple: Literal[False] = False,
-    **kwargs: Unpack[_ArrayNKwargs],
-) -> npt.NDArray[np.float64]: ...
-@overload
-def validate_arrayNx3(  # type: ignore[overload-overlap]
     arr: Sequence[bool] | Sequence[Sequence[bool]],
     /,
     *,
@@ -2040,17 +2029,6 @@ def validate_arrayNx3(
     **kwargs: Unpack[_ArrayNKwargs],
 ) -> npt.NDArray[_Scalar]: ...
 @overload
-def validate_arrayNx3(  # type: ignore[overload-overlap]
-    arr: list[Never] | list[list[Never]],
-    /,
-    *,
-    reshape: bool = ...,
-    dtype_out: None = None,
-    to_list: Literal[True],
-    to_tuple: Literal[False] = False,
-    **kwargs: Unpack[_ArrayNKwargs],
-) -> list[list[float]]: ...
-@overload
 def validate_arrayNx3(
     arr: npt.NDArray[np.bool_] | Sequence[bool] | Sequence[Sequence[bool]],
     /,
@@ -2127,17 +2105,6 @@ def validate_arrayNx3(
     to_tuple: Literal[False] = False,
     **kwargs: Unpack[_ArrayNKwargs],
 ) -> list[list[bool]] | list[list[int]] | list[list[float]]: ...
-@overload
-def validate_arrayNx3(  # type: ignore[overload-overlap]
-    arr: list[Never] | list[list[Never]],
-    /,
-    *,
-    reshape: bool = ...,
-    dtype_out: None = None,
-    to_list: bool = False,
-    to_tuple: Literal[True],
-    **kwargs: Unpack[_ArrayNKwargs],
-) -> tuple[tuple[float, float, float], ...]: ...
 @overload
 def validate_arrayNx3(
     arr: npt.NDArray[np.bool_] | Sequence[bool] | Sequence[Sequence[bool]],
@@ -3243,17 +3210,6 @@ def validate_dimensionality(
     **kwargs: Unpack[_DimensionalityKwargs],
 ) -> int: ...
 @overload
-def validate_dimensionality(  # type: ignore[overload-overlap]
-    dimensionality: Literal[0, 1, 2, 3, '0D', '1D', '2D', '3D'] | VectorLike,
-    /,
-    *,
-    reshape: bool = ...,
-    dtype_out: type[int | _Integer],
-    to_list: Literal[True] = True,
-    to_tuple: bool = False,
-    **kwargs: Unpack[_DimensionalityKwargs],
-) -> int: ...
-@overload
 def validate_dimensionality(
     dimensionality: Literal[0, 1, 2, 3, '0D', '1D', '2D', '3D'] | VectorLike,
     /,
@@ -3264,6 +3220,17 @@ def validate_dimensionality(
     to_tuple: bool = False,
     **kwargs: Unpack[_DimensionalityKwargs],
 ) -> bool: ...
+@overload
+def validate_dimensionality(
+    dimensionality: Literal[0, 1, 2, 3, '0D', '1D', '2D', '3D'] | VectorLike,
+    /,
+    *,
+    reshape: bool = ...,
+    dtype_out: type[int | _Integer],
+    to_list: Literal[True] = True,
+    to_tuple: bool = False,
+    **kwargs: Unpack[_DimensionalityKwargs],
+) -> int: ...
 @overload
 def validate_dimensionality(
     dimensionality: Literal[0, 1, 2, 3, '0D', '1D', '2D', '3D'] | VectorLike,
