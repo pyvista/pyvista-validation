@@ -511,3 +511,32 @@ def test_validate_rotation_agrees(rotation, pure):
                     pyvista_validation.validate_rotation, pure.validate_rotation, rotation, hand,
                     tolerance=tolerance, name=name,
                 )  # fmt: skip
+
+
+# The block size and the size from which the loops drop the GIL, from src/fast/values.c.
+BLOCK = 4096
+GIL_RELEASE = 65536
+LARGE = GIL_RELEASE + BLOCK + 2
+
+
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64', 'int16', 'int64', 'uint8'])
+@pytest.mark.parametrize('index', [0, BLOCK - 1, BLOCK, BLOCK + 1, GIL_RELEASE, LARGE - 2])
+def test_large_arrays_agree(dtype, index, pure):
+    """One element out of place at each block and GIL-release boundary must still be caught."""
+    array = np.zeros(LARGE, dtype=dtype)
+    assert_same(pyvista_validation.check_range, pure.check_range, array, [0, 1])
+    assert_same(pyvista_validation.check_sorted, pure.check_sorted, array)
+    array[index] = 5
+    assert_same(pyvista_validation.check_range, pure.check_range, array, [0, 1])
+    assert_same(pyvista_validation.check_sorted, pure.check_sorted, array)
+    assert_same(
+        pyvista_validation.validate_array, pure.validate_array, array,
+        must_be_nonnegative=True, must_be_integer=True, must_be_in_range=[0, 5],
+    )  # fmt: skip
+    if dtype.startswith('float'):
+        array[index] = np.nan
+        assert_same(pyvista_validation.check_finite, pure.check_finite, array)
+        assert_same(pyvista_validation.check_nonnegative, pure.check_nonnegative, array)
+        assert_same(
+            pyvista_validation.validate_array, pure.validate_array, array, must_be_finite=True
+        )
