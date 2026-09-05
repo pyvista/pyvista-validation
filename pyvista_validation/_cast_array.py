@@ -11,6 +11,8 @@ import numpy as np
 if TYPE_CHECKING:
     import numpy.typing as npt
 
+    from pyvista_validation._typing import _AnyArrayLikeOrScalar
+    from pyvista_validation._typing import _AnyScalar
     from pyvista_validation._typing import _ArrayLikeOrScalar
     from pyvista_validation._typing import _DTypeLike
     from pyvista_validation._typing import _EmptyList
@@ -19,16 +21,21 @@ if TYPE_CHECKING:
     from pyvista_validation._typing import _NestedBool
     from pyvista_validation._typing import _NestedFloat
     from pyvista_validation._typing import _NestedInt
+    from pyvista_validation._typing import _NestedStr
     from pyvista_validation._typing import _Scalar
     from pyvista_validation._typing import _ScalarT
+    from pyvista_validation._typing import _ToAnyList
+    from pyvista_validation._typing import _ToAnyTuple
     from pyvista_validation._typing import _ToList
     from pyvista_validation._typing import _ToListBool
     from pyvista_validation._typing import _ToListFloat
     from pyvista_validation._typing import _ToListInt
+    from pyvista_validation._typing import _ToListStr
     from pyvista_validation._typing import _ToTuple
     from pyvista_validation._typing import _ToTupleBool
     from pyvista_validation._typing import _ToTupleFloat
     from pyvista_validation._typing import _ToTupleInt
+    from pyvista_validation._typing import _ToTupleStr
 
 
 # Overloads follow NumPy's dtype inference: NumPy inputs keep their dtype, Python bools, ints
@@ -48,9 +55,13 @@ def _cast_to_list(arr: npt.NDArray[_Integer] | _Integer | int | _NestedInt, /) -
 @overload
 def _cast_to_list(arr: npt.NDArray[_Floating] | _Floating | float | _NestedFloat, /) -> _ToListFloat: ...
 @overload
+def _cast_to_list(arr: npt.NDArray[np.str_] | np.str_ | str | _NestedStr, /) -> _ToListStr: ...
+@overload
 def _cast_to_list(arr: _ArrayLikeOrScalar, /) -> _ToList: ...
+@overload
+def _cast_to_list(arr: _AnyArrayLikeOrScalar, /) -> _ToAnyList: ...
 # fmt: on
-def _cast_to_list(arr: _ArrayLikeOrScalar, /) -> _ToList:
+def _cast_to_list(arr: _AnyArrayLikeOrScalar, /) -> _ToAnyList:
     """Cast an array to a nested list.
 
     Parameters
@@ -77,9 +88,13 @@ def _cast_to_tuple(arr: npt.NDArray[_Integer] | _Integer | int | _NestedInt, /) 
 @overload
 def _cast_to_tuple(arr: npt.NDArray[_Floating] | _Floating | float | _NestedFloat, /) -> _ToTupleFloat: ...
 @overload
+def _cast_to_tuple(arr: npt.NDArray[np.str_] | np.str_ | str | _NestedStr, /) -> _ToTupleStr: ...
+@overload
 def _cast_to_tuple(arr: _ArrayLikeOrScalar, /) -> _ToTuple: ...
+@overload
+def _cast_to_tuple(arr: _AnyArrayLikeOrScalar, /) -> _ToAnyTuple: ...
 # fmt: on
-def _cast_to_tuple(arr: _ArrayLikeOrScalar, /) -> _ToTuple:
+def _cast_to_tuple(arr: _AnyArrayLikeOrScalar, /) -> _ToAnyTuple:
     """Cast an array to a nested tuple.
 
     Parameters
@@ -93,7 +108,7 @@ def _cast_to_tuple(arr: _ArrayLikeOrScalar, /) -> _ToTuple:
         Tuple or nested tuple array.
 
     """
-    return cast('_ToTuple', _to_tuple(_cast_to_list(arr)))
+    return cast('_ToAnyTuple', _to_tuple(_cast_to_list(arr)))
 
 
 # fmt: off
@@ -108,6 +123,8 @@ def _cast_to_numpy(arr: int | _NestedInt, /, *, as_any: bool = ..., dtype: None 
 @overload
 def _cast_to_numpy(arr: float | _NestedFloat, /, *, as_any: bool = ..., dtype: None = None, copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[np.float64]: ...
 @overload
+def _cast_to_numpy(arr: npt.NDArray[np.str_] | np.str_ | str | _NestedStr, /, *, as_any: bool = ..., dtype: None = None, copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[np.str_]: ...
+@overload
 def _cast_to_numpy(arr: _ArrayLikeOrScalar, /, *, as_any: bool = ..., dtype: type[_ScalarT], copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[_ScalarT]: ...  # type: ignore[overload-overlap]
 @overload
 def _cast_to_numpy(arr: _ArrayLikeOrScalar, /, *, as_any: bool = ..., dtype: type[bool], copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[np.bool_]: ...  # type: ignore[overload-overlap]
@@ -117,16 +134,18 @@ def _cast_to_numpy(arr: _ArrayLikeOrScalar, /, *, as_any: bool = ..., dtype: typ
 def _cast_to_numpy(arr: _ArrayLikeOrScalar, /, *, as_any: bool = ..., dtype: type[float], copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[np.float64]: ...
 @overload
 def _cast_to_numpy(arr: _ArrayLikeOrScalar, /, *, as_any: bool = ..., dtype: _DTypeLike | None = None, copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[_Scalar]: ...
+@overload
+def _cast_to_numpy(arr: _AnyArrayLikeOrScalar, /, *, as_any: bool = ..., dtype: _DTypeLike | None = None, copy: bool = ..., must_be_real: bool = ...) -> npt.NDArray[_AnyScalar]: ...
 # fmt: on
 def _cast_to_numpy(
-    arr: _ArrayLikeOrScalar,
+    arr: _AnyArrayLikeOrScalar,
     /,
     *,
     as_any: bool = True,
     dtype: _DTypeLike | None = None,
     copy: bool = False,
     must_be_real: bool = False,
-) -> npt.NDArray[_Scalar]:
+) -> npt.NDArray[_AnyScalar]:
     """Cast array to a NumPy ``ndarray``.
 
     Object arrays are not allowed but the ``dtype`` is otherwise unchecked by default.
@@ -159,7 +178,8 @@ def _cast_to_numpy(
 
     must_be_real : bool, default: True
         Raise a ``TypeError`` if the array does not have real numbers, that is
-        its data type is not integer or floating.
+        its data type is not integer or floating. Boolean and text arrays are
+        not real.
 
     Raises
     ------
@@ -187,24 +207,25 @@ def _cast_to_numpy(
         msg = f'Array must have real numbers. Got dtype {out.dtype.type}'
         raise TypeError(msg)
     if out.dtype.kind == 'O':
-        msg = f'Object arrays are not supported. Got {arr} when casting to a NumPy array.'
+        shown = arr.decode(errors='replace') if isinstance(arr, bytes) else arr
+        msg = f'Object arrays are not supported. Got {shown} when casting to a NumPy array.'
         raise TypeError(msg)
     return out
 
 
 def _asarray(
-    arr: _ArrayLikeOrScalar, /, *, dtype: _DTypeLike | None, as_any: bool
-) -> npt.NDArray[_Scalar]:
+    arr: _AnyArrayLikeOrScalar, /, *, dtype: _DTypeLike | None, as_any: bool
+) -> npt.NDArray[_AnyScalar]:
     """Call NumPy's array constructors, whose dynamic return types stop here."""
     return cast(
-        'npt.NDArray[_Scalar]',
+        'npt.NDArray[_AnyScalar]',
         np.asanyarray(arr, dtype=dtype) if as_any else np.asarray(arr, dtype=dtype),
     )
 
 
-def _tolist(array: npt.NDArray[_Scalar], /) -> _ToList:
+def _tolist(array: npt.NDArray[_AnyScalar], /) -> _ToAnyList:
     """Convert an array to nested lists, typing what NumPy leaves as ``Any``."""
-    return cast('_ToList', array.tolist())
+    return cast('_ToAnyList', array.tolist())
 
 
 def _to_tuple(obj: object, /) -> object:

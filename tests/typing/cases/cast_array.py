@@ -12,21 +12,35 @@ from pyvista_validation._cast_array import _cast_to_numpy
 from pyvista_validation._cast_array import _cast_to_tuple
 from pyvista_validation._cast_array import _to_tuple
 from pyvista_validation._cast_array import _tolist
+from pyvista_validation._typing import _AnyArrayLikeOrScalar
+from pyvista_validation._typing import _AnyScalar
 from pyvista_validation._typing import _ArrayLikeOrScalar
 from pyvista_validation._typing import _Scalar
+from pyvista_validation._typing import _ToAnyList
+from pyvista_validation._typing import _ToAnyTuple
 from pyvista_validation._typing import _ToList
 from pyvista_validation._typing import _ToListBool
 from pyvista_validation._typing import _ToListFloat
 from pyvista_validation._typing import _ToListInt
+from pyvista_validation._typing import _ToListStr
 from pyvista_validation._typing import _ToTuple
 from pyvista_validation._typing import _ToTupleBool
 from pyvista_validation._typing import _ToTupleFloat
 from pyvista_validation._typing import _ToTupleInt
+from pyvista_validation._typing import _ToTupleStr
 
 
 def array_like() -> _ArrayLikeOrScalar:
     """Return an array typed as broadly as the parameter that accepts it."""
     return [1, 2]
+
+
+def any_array_like() -> _AnyArrayLikeOrScalar:
+    """Return an array typed as broadly as the parameters that also accept text."""
+    return ['a', 'b']
+
+
+TEXT: npt.NDArray[np.str_] = np.array(['a', 'b'])
 
 
 # Bound to a name first: passed inline, mypy would infer the constructor call against the
@@ -66,6 +80,17 @@ assert_types(_cast_to_tuple(int8_array), _ToTupleInt)
 assert_types(_cast_to_tuple([[1.5]]), _ToTupleFloat)
 assert_types(_cast_to_tuple(1), _ToTupleInt)
 assert_types(_cast_to_tuple(array_like()), _ToTuple)
-assert_types(_asarray([1, 2], dtype=None, as_any=True), npt.NDArray[_Scalar])
-assert_types(_tolist(np.zeros(2)), _ToList)
+assert_types(_asarray([1, 2], dtype=None, as_any=True), npt.NDArray[_AnyScalar])
+assert_types(_tolist(np.zeros(2)), _ToAnyList)
 assert_types(_to_tuple([1, [2, 3]]), object)
+
+# Text is admitted alongside numbers; NumPy sorts and reshapes it, so the same helpers apply.
+assert_types(_cast_to_numpy('abc'), npt.NDArray[np.str_])
+assert_types(_cast_to_numpy(['a', 'b']), npt.NDArray[np.str_])
+assert_types(_cast_to_numpy(TEXT), npt.NDArray[np.str_])
+assert_types(_cast_to_numpy(any_array_like()), npt.NDArray[_AnyScalar])
+assert_types(_cast_to_list('abc'), _ToListStr)
+assert_types(_cast_to_list([['a'], ['b']]), _ToListStr)
+assert_types(_cast_to_list(any_array_like()), _ToAnyList)
+assert_types(_cast_to_tuple(TEXT), _ToTupleStr)
+assert_types(_cast_to_tuple(any_array_like()), _ToAnyTuple)
