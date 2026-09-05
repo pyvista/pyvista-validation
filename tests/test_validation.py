@@ -1525,8 +1525,7 @@ def test_scalar_check_functions_return_their_input():
     assert check_contains([1, 2], must_contain=2) == 2
 
 
-# Behaviour the API documents that the tests above do not pin down. Where the implementation
-# falls short of its documentation, the test is a strict xfail that says how.
+# Behaviour the API documents that the tests above do not pin down.
 
 
 @pytest.mark.parametrize(
@@ -2131,7 +2130,6 @@ def test_check_integer_strict_requires_an_integer_dtype():
         check_integer([1.0], strict=True)
 
 
-@pytest.mark.xfail(strict=True, reason='check_integer does not pass the name on to check_subdtype')
 def test_check_integer_strict_error_reports_the_name():
     with pytest.raises(TypeError, match='_input has incorrect dtype'):
         check_integer([1.0], strict=True, name='_input')

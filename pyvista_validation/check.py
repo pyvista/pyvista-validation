@@ -402,7 +402,7 @@ def check_integer(
     """
     array_ = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
     if strict:
-        check_subdtype(array_, np.integer)
+        check_subdtype(array_, np.integer, name=name)
     elif not np.array_equal(array_, np.floor(array_)):
         msg = f'{name} must have integer-like values.'
         raise ValueError(msg)
