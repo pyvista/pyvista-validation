@@ -1933,17 +1933,15 @@ def test_validate_axes_normalize_returns_unit_float_vectors():
     assert validate_axes(np.eye(3, dtype=int), normalize=False).dtype == np.int64
 
 
-@pytest.mark.xfail(
-    strict=True, reason='parallel rows are only detected at unit scale, and only against row 0'
-)
 @pytest.mark.parametrize(
     'axes',
     [
         ([2, 0, 0], [1, 0, 0], [0, 0, 1]),
         ([1, 0, 0], [0, 1, 0], [0, 1, 0]),
         ([1, 0, 0], [-1, 0, 0], [0, 0, 1]),
+        ([1, 0, 0], [2, 0, 0]),
     ],
-    ids=['scaled', 'rows-1-and-2', 'antiparallel'],
+    ids=['scaled', 'rows-1-and-2', 'antiparallel', 'two-vectors'],
 )
 def test_validate_axes_rejects_parallel_vectors_in_any_position(axes):
     with pytest.raises(ValueError, match='cannot be parallel'):

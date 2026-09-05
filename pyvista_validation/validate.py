@@ -798,19 +798,17 @@ def validate_axes(
             vectors[2] = validate_array3(axes[2], name=f'{name} Vector[2]')
         else:
             first, second, _ = vectors
-            if must_have_orientation == 'right':
-                vectors[2] = np.cross(first, second)
-            else:
-                vectors[2] = np.cross(second, first)
+            third = np.cross(first, second)
+            # Two parallel vectors have no third axis; zero vectors are reported below
+            if np.isclose(third, 0).all() and not np.isclose(vectors[:2], 0).all(axis=1).any():
+                msg = f'{name} cannot be parallel.'
+                raise ValueError(msg)
+            vectors[2] = third if must_have_orientation == 'right' else -third
         axes_array = vectors
     check_finite(axes_array, name=name)
 
     # The checks below are done in floating point; the input dtype is kept for the output
     matrix = axes_array.astype(np.float64, copy=False).reshape((3, 3))
-    row0, row1, row2 = matrix
-    if np.isclose(row0 @ row1, 1) or np.isclose(row0 @ row2, 1):
-        msg = f'{name} cannot be parallel.'
-        raise ValueError(msg)
     if np.isclose(matrix, 0).all(axis=1).any():
         msg = f'{name} cannot be zeros.'
         raise ValueError(msg)
@@ -819,6 +817,11 @@ def validate_axes(
     norms = np.linalg.norm(matrix, axis=1, keepdims=True)
     axes_norm: _Matrix = matrix / norms
     norm0, norm1, norm2 = axes_norm
+    # Parallel and antiparallel unit vectors have a dot product of magnitude one
+    pairs = ((norm0, norm1), (norm0, norm2), (norm1, norm2))
+    if any(np.isclose(abs(first @ second), 1) for first, second in pairs):
+        msg = f'{name} cannot be parallel.'
+        raise ValueError(msg)
     cross_0_1 = np.cross(norm0, norm1)
     cross_1_2 = np.cross(norm1, norm2)
 
