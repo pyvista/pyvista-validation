@@ -26,6 +26,7 @@ from typing import overload
 import numpy as np
 
 from pyvista_validation import _lazy_import
+from pyvista_validation._accelerate import accelerate
 from pyvista_validation._cast_array import _cast_to_numpy
 from pyvista_validation._cast_array import _cast_to_tuple
 from pyvista_validation._cast_array import _tolist
@@ -2027,3 +2028,23 @@ def _astype(array: npt.NDArray[_AnyScalar], dtype: _DTypeLike, /) -> npt.NDArray
 def _validate_any(arr: _AnyArrayLikeOrScalar, /, **kwargs: Unpack[_AllKwargs]) -> _AnyArrayOut:
     """Forward to ``validate_array``; a ``must_be_real`` typed ``bool`` selects no overload."""
     return validate_array(cast('_ArrayLikeOrScalar', arr), **kwargs)
+
+
+if not TYPE_CHECKING:
+    accelerate(
+        globals(),
+        [
+            'validate_array',
+            'validate_axes',
+            'validate_rotation',
+            'validate_transform4x4',
+            'validate_transform3x3',
+            'validate_number',
+            'validate_data_range',
+            'validate_arrayNx3',
+            'validate_arrayN',
+            'validate_arrayN_unsigned',
+            'validate_array3',
+            'validate_dimensionality',
+        ],
+    )

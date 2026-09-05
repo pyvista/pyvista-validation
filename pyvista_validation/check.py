@@ -28,6 +28,7 @@ from typing import overload
 
 import numpy as np
 
+from pyvista_validation._accelerate import accelerate
 from pyvista_validation._cast_array import _cast_to_numpy
 
 if sys.version_info >= (3, 13):
@@ -1440,3 +1441,31 @@ def _issubdtype(dtype: np.dtype[np.generic[object]], base: _DTypeLike, /) -> boo
 def _shape_of(array: _AnyArrayLikeOrScalar, /) -> tuple[int, ...]:
     """Return the shape the input would have as an array, without copying it."""
     return np.shape(cast('npt.ArrayLike', array))
+
+
+if not TYPE_CHECKING:
+    accelerate(
+        globals(),
+        [
+            'check_subdtype',
+            'check_real',
+            'check_sorted',
+            'check_finite',
+            'check_integer',
+            'check_nonnegative',
+            'check_greater_than',
+            'check_less_than',
+            'check_range',
+            'check_shape',
+            'check_ndim',
+            'check_number',
+            'check_string',
+            'check_sequence',
+            'check_iterable',
+            'check_instance',
+            'check_type',
+            'check_iterable_items',
+            'check_contains',
+            'check_length',
+        ],
+    )
