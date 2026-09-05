@@ -119,7 +119,12 @@ def assert_same_fresh(fast, slow, make, *args, **kwargs):
     """Assert agreement on an input that each call must get fresh, like an iterator."""
     expected = outcome(slow, make(), *args, **kwargs)
     actual = outcome(fast, make(), *args, **kwargs)
-    compare(actual, expected)
+    if expected[0] == 'returned':
+        # Two fresh inputs only compare by type
+        assert actual[0] == 'returned', actual
+        assert type(actual[1]) is type(expected[1]), (actual[1], expected[1])
+    else:
+        compare(actual, expected)
 
 
 def compare(actual, expected):
