@@ -66,6 +66,13 @@ Homepage = 'https://github.com/pyvista/pyvista-validation'
 # The pinned Sphinx needs a newer Python than the package itself supports.
 docs = { requires-python = '>=3.11' }
 
+[tool.cibuildwheel]
+# One stable-ABI wheel per platform; the test matrix covers the other Pythons.
+build = 'cp310-*'
+build-verbosity = 1
+test-command = 'python -c "from pyvista_validation import _accelerate; assert _accelerate.enabled" && pytest {project}/tests --ignore={project}/tests/typing --no-cov -q'
+test-requires = ['pytest', 'pytest-cov']
+
 [tool.coverage.run]
 branch = true
 # _typing is imported only by type checkers, never at runtime.
