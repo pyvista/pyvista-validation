@@ -16,10 +16,10 @@ from __future__ import annotations
 import inspect
 import itertools
 import reprlib
+import sys
 from typing import TYPE_CHECKING
 from typing import Literal
 from typing import TypedDict
-from typing import TypeVar
 from typing import cast
 from typing import overload
 
@@ -41,6 +41,12 @@ from pyvista_validation.check import check_shape
 from pyvista_validation.check import check_sorted
 from pyvista_validation.check import check_string
 from pyvista_validation.check import check_subdtype
+
+if sys.version_info >= (3, 13):
+    from typing import TypeVar
+else:
+    # Type variable defaults (PEP 696) reached the standard library in 3.13.
+    from typing_extensions import TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -121,7 +127,7 @@ if TYPE_CHECKING:
     _Matrix: TypeAlias = np.ndarray[tuple[int, int], np.dtype[np.float64]]
 
 # For validate_arrayN_unsigned, whose dtype_out must be an integer type.
-_IntegerT = TypeVar('_IntegerT', bound='_Integer')
+_IntegerT = TypeVar('_IntegerT', bound='_Integer', default='_Integer')
 
 
 class _SortedKwargs(TypedDict, total=False):

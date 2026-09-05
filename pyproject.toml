@@ -39,7 +39,10 @@ classifiers = [
   'Topic :: Software Development :: Libraries :: Python Modules',
   'Typing :: Typed',
 ]
-dependencies = ['numpy>=1.21.0']
+dependencies = [
+  'numpy>=1.21.0',
+  'typing-extensions>=4.4; python_version < "3.13"',
+]
 description = 'Validate and standardize array-like input.'
 dynamic = ['version']
 keywords = ['array', 'numpy', 'validation']
