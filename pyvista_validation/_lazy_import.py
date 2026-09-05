@@ -15,6 +15,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import os
+import sys
 from typing import TYPE_CHECKING
 from typing import cast
 
@@ -85,5 +86,5 @@ def __getattr__(name: str) -> type[object]:
         msg = f'module {__name__!r} has no attribute {name!r}'
         raise AttributeError(msg)
 
-    globals()[name] = value  # __getattr__ only runs on a miss, so this caches
+    setattr(sys.modules[__name__], name, value)  # __getattr__ only runs on a miss, so this caches
     return value
