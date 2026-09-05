@@ -253,6 +253,42 @@ static PyArray_Descr *dtype_of(PyObject *obj)
     return descr;
 }
 
+/* np.broadcast_to for a plain ndarray: a read-only view with zero strides where the array
+ * repeats. FALLBACK when the shapes are incompatible, which Python reports. */
+static PyObject *broadcast_view(PyArrayObject *array, npy_intp *dims, int nd)
+{
+    int ndim = PyArray_NDIM(array);
+    if (nd < ndim) {
+        RETURN_FALLBACK;
+    }
+    npy_intp strides[MAXDIMS];
+    for (int i = 0; i < nd; i++) {
+        int j = i - (nd - ndim);
+        if (j < 0 || PyArray_DIM(array, j) == 1) {
+            strides[i] = 0;
+        }
+        else if (PyArray_DIM(array, j) == dims[i]) {
+            strides[i] = PyArray_STRIDE(array, j);
+        }
+        else {
+            RETURN_FALLBACK;
+        }
+    }
+    PyArray_Descr *descr = PyArray_DESCR(array);
+    Py_INCREF(descr);
+    PyObject *view = PyArray_NewFromDescr(&PyArray_Type, descr, nd, dims, strides,
+                                          PyArray_DATA(array), 0, NULL);
+    if (view == NULL) {
+        return NULL;
+    }
+    Py_INCREF(array);
+    if (PyArray_SetBaseObject((PyArrayObject *)view, (PyObject *)array) < 0) {
+        Py_DECREF(view);
+        return NULL;
+    }
+    return view;
+}
+
 /* ---- Data types ------------------------------------------------------------------------- */
 
 /* np.issubdtype(descr, base) for a single base. 1, 0, or -1 to fall back. */

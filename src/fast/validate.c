@@ -130,11 +130,16 @@ static PyObject *array_core(PyObject *const *a)
             same = dims[i] == PyArray_DIM(array, i);
         }
         if (!same) {
-            PyObject *broadcast = PyObject_CallFunctionObjArgs(cache.np_broadcast_to, out,
-                                                               a[A_BROADCAST], Py_True, NULL);
+            /* A subclass goes through np.broadcast_to itself, with subok=True */
+            PyObject *broadcast =
+                PyArray_CheckExact(array)
+                    ? broadcast_view(array, dims, n)
+                    : PyObject_CallFunctionObjArgs(cache.np_broadcast_to, out, a[A_BROADCAST],
+                                                   Py_True, NULL);
             Py_DECREF(out);
-            if (broadcast == NULL) {
+            if (broadcast == NULL || broadcast == FALLBACK) {
                 PyErr_Clear();
+                Py_XDECREF(broadcast);
                 RETURN_FALLBACK;
             }
             out = broadcast;
