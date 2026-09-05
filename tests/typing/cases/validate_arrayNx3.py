@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import numpy.typing as npt
 from type_assert import assert_types
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 from pyvista_validation import validate_arrayNx3
 from pyvista_validation._typing import _AnyScalar
@@ -122,3 +127,11 @@ assert_types(
 )
 assert_types(validate_arrayNx3([1, 2, 3]), npt.NDArray[np.int64])
 assert_types(validate_arrayNx3([[1, 2, 3]], reshape=False), npt.NDArray[np.int64])
+
+
+def float32_points() -> npt.NDArray[np.float32] | Sequence[Sequence[np.float32]]:
+    """Return a value typed as either an array or a nested sequence."""
+    return np.ones((2, 3), dtype=np.float32)
+
+
+assert_types(validate_arrayNx3(float32_points()), npt.NDArray[np.float32])

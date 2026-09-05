@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import numpy.typing as npt
 from type_assert import assert_types
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 from pyvista_validation import validate_data_range
 from pyvista_validation._typing import _AnyScalar
@@ -118,3 +123,13 @@ assert_types(validate_data_range([0, 1], to_list=flag()), _DataRangeOut)
 assert_types(validate_data_range(['a', 'b'], must_be_real=False, to_list=flag()), _DataRangeAnyOut)
 assert_types(validate_data_range((0, 1), to_tuple=True), tuple[int, int])
 assert_types(validate_data_range([0, 1], to_list=False), _DataRangeOut)
+
+
+def float32_range() -> npt.NDArray[np.float32] | Sequence[np.float32]:
+    """Return a value typed as either an array or a sequence of the same scalar."""
+    return np.array([0.0, 1.0], dtype=np.float32)
+
+
+assert_types(
+    validate_data_range(float32_range(), to_list=False, to_tuple=False), npt.NDArray[np.float32]
+)

@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import numpy.typing as npt
 from type_assert import assert_types
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 from pyvista_validation import validate_array
 from pyvista_validation._typing import _AnyScalar
+from pyvista_validation._typing import _Floating
 from pyvista_validation._typing import _Scalar
 from pyvista_validation._typing import _ToAnyList
 from pyvista_validation._typing import _ToAnyTuple
@@ -75,3 +81,18 @@ assert_types(
 )
 assert_types(validate_array([1, 2], to_list=flag()), _ArrayOut)
 assert_types(validate_array(['a', 'b'], must_be_real=False, to_list=flag()), _AnyArrayOut)
+
+
+# An argument whose type spans an array and sequences of the same scalar keeps that scalar.
+def float32_matrix() -> npt.NDArray[np.float32] | Sequence[Sequence[np.float32]]:
+    """Return a value typed as either an array or a nested sequence."""
+    return np.ones((2, 2), dtype=np.float32)
+
+
+def floating_matrix() -> npt.NDArray[_Floating] | Sequence[Sequence[float]]:
+    """Return a value typed as either a floating array or a nested sequence of floats."""
+    return np.ones((2, 2))
+
+
+assert_types(validate_array(float32_matrix()), npt.NDArray[np.float32])
+assert_types(validate_array(floating_matrix(), to_list=True), _ToListFloat)
