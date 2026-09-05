@@ -1532,9 +1532,6 @@ def test_scalar_check_functions_return_their_input():
 # Behaviour the API documents that the tests above do not pin down. Where the implementation
 # falls short of its documentation, the test is a strict xfail that says how.
 
-XFAIL_LENGTH_BEFORE_RESHAPE = pytest.mark.xfail(
-    strict=True, reason='the length is checked on the input, before reshaping and broadcasting'
-)
 XFAIL_NUMPY_SCALAR_LENGTH = pytest.mark.xfail(
     strict=True, reason='allow_scalar handles Python numbers and 0-D arrays, not NumPy scalars'
 )
@@ -1580,17 +1577,14 @@ def test_validate_array_shape_is_checked_before_reshaping():
     assert validate_array([1, 2, 3], must_have_shape=3, reshape_to=(3, 1)).shape == (3, 1)
 
 
-@XFAIL_LENGTH_BEFORE_RESHAPE
 def test_validate_array_length_is_checked_after_reshaping():
     assert validate_array([[1, 2, 3]], reshape_to=(3,), must_have_length=3).shape == (3,)
 
 
-@XFAIL_LENGTH_BEFORE_RESHAPE
 def test_validate_array_length_is_checked_after_broadcasting():
     assert validate_array(1, broadcast_to=(3,), must_have_length=3).shape == (3,)
 
 
-@XFAIL_LENGTH_BEFORE_RESHAPE
 def test_validate_array3_broadcast_satisfies_a_length_constraint():
     assert validate_array3(1, broadcast=True, must_have_length=3).shape == (3,)
 
@@ -1711,7 +1705,6 @@ def test_validate_array_without_as_any_copies_a_subclass():
     assert not np.shares_memory(validate_array(array, as_any=False), array)
 
 
-@XFAIL_NUMPY_SCALAR_LENGTH
 def test_validate_array_length_of_a_numpy_scalar():
     assert validate_array(np.int64(1), must_have_length=1) == 1
 

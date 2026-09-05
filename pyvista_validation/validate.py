@@ -659,7 +659,7 @@ def validate_array(
         or must_have_max_length is not None
     ):
         check_length(
-            arr,
+            arr_out,
             exact_length=must_have_length,
             min_length=must_have_min_length,
             max_length=must_have_max_length,
