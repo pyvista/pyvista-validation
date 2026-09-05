@@ -50,6 +50,7 @@ else:
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Any
     from typing import TypeAlias
 
     import numpy.typing as npt
@@ -578,17 +579,12 @@ def validate_array(
         ``dtype`` is inferred from the input data.
 
     as_any : bool, default: True
-        Allow subclasses of ``np.ndarray`` to pass through without
-        making a copy.
+        Allow subclasses of ``np.ndarray`` to pass through. Otherwise, a
+        subclass is returned as a base ``np.ndarray`` view of the same data.
 
     copy : bool, default: False
-        If ``True``, a copy of the array is returned. A copy is always
-        returned if the array:
-
-        * is a nested sequence
-        * is a subclass of ``np.ndarray`` and ``as_any`` is ``False``.
-
-        A copy may also be made to satisfy ``dtype_out`` requirements.
+        If ``True``, a copy of the array is returned. A new array is always
+        made from a sequence, and one may also be made to satisfy ``dtype_out``.
 
     to_list : bool, default: False
         Return the validated array as a ``list`` or nested ``list``. Scalar
@@ -659,7 +655,7 @@ def validate_array(
         or must_have_max_length is not None
     ):
         check_length(
-            arr,
+            arr_out,
             exact_length=must_have_length,
             min_length=must_have_min_length,
             max_length=must_have_max_length,
@@ -803,8 +799,13 @@ def validate_axes(
             vectors[2] = validate_array3(axes[2], name=f'{name} Vector[2]')
         else:
             first, second, _ = vectors
+            third = np.cross(first, second)
+            # Two parallel vectors have no third axis; zero vectors are reported below
+            if np.isclose(third, 0).all() and not np.isclose(vectors[:2], 0).all(axis=1).any():
+                msg = f'{name} cannot be parallel.'
+                raise ValueError(msg)
             if must_have_orientation == 'right':
-                vectors[2] = np.cross(first, second)
+                vectors[2] = third
             else:
                 vectors[2] = np.cross(second, first)
         axes_array = vectors
@@ -812,10 +813,6 @@ def validate_axes(
 
     # The checks below are done in floating point; the input dtype is kept for the output
     matrix = axes_array.astype(np.float64, copy=False).reshape((3, 3))
-    row0, row1, row2 = matrix
-    if np.isclose(row0 @ row1, 1) or np.isclose(row0 @ row2, 1):
-        msg = f'{name} cannot be parallel.'
-        raise ValueError(msg)
     if np.isclose(matrix, 0).all(axis=1).any():
         msg = f'{name} cannot be zeros.'
         raise ValueError(msg)
@@ -824,6 +821,11 @@ def validate_axes(
     norms = np.linalg.norm(matrix, axis=1, keepdims=True)
     axes_norm: _Matrix = matrix / norms
     norm0, norm1, norm2 = axes_norm
+    # Parallel and antiparallel unit vectors have a dot product of magnitude one
+    pairs = ((norm0, norm1), (norm0, norm2), (norm1, norm2))
+    if any(np.isclose(abs(first @ second), 1) for first, second in pairs):
+        msg = f'{name} cannot be parallel.'
+        raise ValueError(msg)
     cross_0_1 = np.cross(norm0, norm1)
     cross_1_2 = np.cross(norm1, norm2)
 
@@ -1086,8 +1088,6 @@ def validate_transform3x3(
 
     """
     check_string(name, name='Name')
-    if isinstance(transform, _lazy_import.vtkMatrix3x3):
-        return _array_from_vtkmatrix(transform, shape=(3, 3))
     try:
         # VTK and SciPy objects raise TypeError here and are handled below
         return validate_array(
@@ -1096,11 +1096,11 @@ def validate_transform3x3(
             must_be_finite=must_be_finite,
             name=name,
         )
-    except ValueError:
-        pass
     except TypeError:
+        # Not array-like; only now touch the lazy VTK and SciPy imports
+        if isinstance(transform, _lazy_import.vtkMatrix3x3):
+            return _array_from_vtkmatrix(transform, shape=(3, 3))
         if isinstance(transform, _lazy_import.Rotation):
-            # Get matrix output and try validating again
             return validate_transform3x3(
                 transform.as_matrix(), must_be_finite=must_be_finite, name=name
             )
@@ -1343,7 +1343,7 @@ def validate_data_range(
     kwargs.setdefault('name', 'Data Range')
     _set_default_kwarg_mandatory(cast('dict[str, object]', kwargs), 'must_have_shape', 2)
     _set_default_kwarg_mandatory(cast('dict[str, object]', kwargs), 'must_be_sorted', True)
-    if 'to_list' not in kwargs:
+    if not kwargs.get('to_list'):
         kwargs.setdefault('to_tuple', True)
     return cast('_DataRangeAnyOut', _validate_any(rng, **kwargs))
 
@@ -1610,7 +1610,7 @@ def validate_arrayN(  # noqa: N802
     Scalar 0-dimensional values are automatically reshaped to be 1D.
 
     >>> validate_arrayN(42.0)
-    array([42.0])
+    array([42.])
 
     2D arrays where the first dimension is unity are automatically
     reshaped to be 1D.
@@ -1658,6 +1658,7 @@ def validate_arrayN_unsigned(  # noqa: N802
     * have shape ``(N,)`` or can be reshaped to ``(N,)``
     * are integer-like
     * are non-negative
+    * can be represented by the output data type
 
     The returned array is formatted so that its values:
 
@@ -1731,6 +1732,12 @@ def validate_arrayN_unsigned(  # noqa: N802
 
     _set_default_kwarg_mandatory(cast('dict[str, object]', kwargs), 'must_be_integer', True)
     _set_default_kwarg_mandatory(cast('dict[str, object]', kwargs), 'must_be_nonnegative', True)
+
+    # A value above what the output dtype can hold would otherwise wrap around
+    limit = _integer_max(cast('_DTypeLike', dtype_out))
+    user_range = kwargs.get('must_be_in_range')
+    rng = _cast_to_numpy([0, limit] if user_range is None else user_range)
+    kwargs['must_be_in_range'] = [rng.item(0), min(rng.item(1), limit)]
 
     return cast('_ArrayNUnsignedOut', validate_arrayN(arr, reshape=reshape, **kwargs))
 
@@ -1869,7 +1876,7 @@ def validate_array3(
     a 3-element 1D array.
 
     >>> validate_array3(42.0, broadcast=True)
-    array([42.0, 42.0, 42.0])
+    array([42., 42., 42.])
 
     Add additional constraints if needed.
 
@@ -1974,18 +1981,20 @@ def validate_dimensionality(
     kwargs.setdefault('to_list', True)
     kwargs.setdefault('must_be_finite', True)
     kwargs.setdefault('must_be_in_range', [0, 3])
+    kwargs.setdefault('dtype_out', int)
+    _set_default_kwarg_mandatory(cast('dict[str, object]', kwargs), 'must_be_integer', True)
 
     as_array = _asarray_any(dimensionality)
     if as_array.dtype.kind == 'U':
-        as_array = np.char.replace(as_array.astype(np.str_), 'D', '')
-    try:
-        as_integers = as_array.astype(np.int64)
-    except ValueError:
-        msg = (
-            f'`{dimensionality}` is not a valid dimensionality.'
-            ' Use one of [0, 1, 2, 3, "0D", "1D", "2D", "3D"].'
-        )
-        raise ValueError(msg) from None
+        # An alias such as '2D' is its number without the suffix
+        try:
+            as_array = np.char.replace(as_array.astype(np.str_), 'D', '').astype(np.int64)
+        except ValueError:
+            msg = (
+                f'`{dimensionality}` is not a valid dimensionality.'
+                ' Use one of [0, 1, 2, 3, "0D", "1D", "2D", "3D"].'
+            )
+            raise ValueError(msg) from None
 
     shape: _ShapeLike | list[_ShapeLike]
     if reshape:
@@ -1995,7 +2004,14 @@ def validate_dimensionality(
         shape = ()
     _set_default_kwarg_mandatory(cast('dict[str, object]', kwargs), 'must_have_shape', shape)
 
-    return cast('_DimensionalityOut', validate_array(as_integers, **kwargs))
+    return cast(
+        '_DimensionalityOut', validate_array(cast('npt.NDArray[_Scalar]', as_array), **kwargs)
+    )
+
+
+def _integer_max(dtype: _DTypeLike, /) -> int:
+    """Return the largest value an integer dtype holds, typing what NumPy leaves as ``Any``."""
+    return int(np.iinfo(cast('type[np.integer[Any]]', dtype)).max)
 
 
 def _asarray_any(obj: object, /) -> npt.NDArray[np.generic[object]]:

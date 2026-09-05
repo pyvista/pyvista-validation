@@ -119,15 +119,18 @@ def check_subdtype(
     >>> import numpy as np
     >>> from pyvista_validation import check_subdtype
     >>> check_subdtype(float, np.floating)
+    <class 'float'>
 
     Check from multiple allowable ``dtypes``.
 
     >>> check_subdtype(int, [np.integer, np.floating])
+    <class 'int'>
 
     Check an array's ``dtype``.
 
     >>> array = np.array([1, 2, 3], dtype='uint8')
     >>> check_subdtype(array, np.integer)
+    array([1, 2, 3], dtype=uint8)
 
     """
     input_dtype = _dtype_of(input_obj)
@@ -187,6 +190,7 @@ def check_real(array: _AnyArrayT, /, *, name: str = 'Array') -> _AnyArrayT:
 
     >>> from pyvista_validation import check_real
     >>> check_real([1, 2, 3])
+    [1, 2, 3]
 
     """
     array_ = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
@@ -254,6 +258,7 @@ def check_sorted(
 
     >>> from pyvista_validation import check_sorted
     >>> check_sorted([1, 2, 3])
+    [1, 2, 3]
 
     """
     array_ = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
@@ -336,6 +341,7 @@ def check_finite(array: _ArrayT, /, *, name: str = 'Array') -> _ArrayT:
 
     >>> from pyvista_validation import check_finite
     >>> check_finite([1, 2, 3])
+    [1, 2, 3]
 
     """
     array_ = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
@@ -391,11 +397,12 @@ def check_integer(
 
     >>> from pyvista_validation import check_integer
     >>> check_integer([1.0, 2.0])
+    [1.0, 2.0]
 
     """
     array_ = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
     if strict:
-        check_subdtype(array_, np.integer)
+        check_subdtype(array_, np.integer, name=name)
     elif not np.array_equal(array_, np.floor(array_)):
         msg = f'{name} must have integer-like values.'
         raise ValueError(msg)
@@ -434,6 +441,7 @@ def check_nonnegative(array: _ArrayT, /, *, name: str = 'Array') -> _ArrayT:
 
     >>> from pyvista_validation import check_nonnegative
     >>> check_nonnegative([1, 2, 3])
+    [1, 2, 3]
 
     """
     return check_greater_than(array, 0, strict=False, name=name)
@@ -495,6 +503,7 @@ def check_greater_than(
 
     >>> from pyvista_validation import check_greater_than
     >>> check_greater_than([1, 2, 3], value=0)
+    [1, 2, 3]
 
     """
     array_ = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
@@ -557,6 +566,7 @@ def check_less_than(
 
     >>> from pyvista_validation import check_less_than
     >>> check_less_than([-1, -2, -3], value=0)
+    [-1, -2, -3]
 
     """
     array_ = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
@@ -626,6 +636,7 @@ def check_range(
 
     >>> from pyvista_validation import check_range
     >>> check_range([0, 0.5, 1], rng=[0, 1])
+    [0, 0.5, 1]
 
     """
     rng_ = rng if isinstance(rng, np.ndarray) else _cast_to_numpy(rng)
@@ -685,14 +696,19 @@ def check_shape(
     >>> import numpy as np
     >>> from pyvista_validation import check_shape
     >>> check_shape([1, 2, 3], shape=(-1))
+    [1, 2, 3]
 
     Check if an array is one-dimensional or a scalar.
 
     >>> check_shape(1, shape=[(), (-1)])
+    1
 
     Check if an array is 3x3 or 4x4.
 
     >>> check_shape(np.eye(3), shape=[(3, 3), (4, 4)])
+    array([[1., 0., 0.],
+           [0., 1., 0.],
+           [0., 0., 1.]])
 
     """
 
@@ -766,10 +782,12 @@ def check_ndim(
     >>> import numpy as np
     >>> from pyvista_validation import check_ndim
     >>> check_ndim([1, 2, 3], ndim=1)
+    [1, 2, 3]
 
     Check if an array is two-dimensional or a scalar.
 
     >>> check_ndim(1, ndim=(0, 2))
+    1
 
     """
     ndim_ = np.atleast_1d(_cast_to_numpy(ndim))
@@ -826,6 +844,7 @@ def check_number(num: object, /, *, name: str = 'Object') -> object:
 
     >>> from pyvista_validation import check_number
     >>> check_number(1 + 2j)
+    (1+2j)
 
     """
     check_instance(num, numbers.Number, allow_subclass=True, name=name)
@@ -876,6 +895,7 @@ def check_string(obj: object, /, *, allow_subclass: bool = True, name: str = 'Ob
 
     >>> from pyvista_validation import check_string
     >>> check_string('eggs')
+    'eggs'
 
     """
     return check_instance(obj, str, allow_subclass=allow_subclass, name=name)
@@ -920,7 +940,9 @@ def check_sequence(obj: object, /, *, name: str = 'Object') -> Sequence[object]:
     >>> import numpy as np
     >>> from pyvista_validation import check_sequence
     >>> check_sequence([1, 2, 3])
+    [1, 2, 3]
     >>> check_sequence('A')
+    'A'
 
     """
     check_instance(obj, Sequence, allow_subclass=True, name=name)
@@ -967,7 +989,9 @@ def check_iterable(obj: object, /, *, name: str = 'Object') -> Iterable[object]:
     >>> import numpy as np
     >>> from pyvista_validation import check_iterable
     >>> check_iterable([1, 2, 3])
+    [1, 2, 3]
     >>> check_iterable(np.array((4, 5, 6)))
+    array([4, 5, 6])
 
     """
     check_instance(obj, Iterable, allow_subclass=True, name=name)
@@ -1034,10 +1058,12 @@ def check_instance(
 
     >>> from pyvista_validation import check_instance
     >>> check_instance(1 + 2j, complex)
+    (1+2j)
 
     Check if an object is an instance of one of several types.
 
     >>> check_instance('eggs', (int, str))
+    'eggs'
 
     """
     if not isinstance(name, str):
@@ -1120,6 +1146,7 @@ def check_type(obj: object, /, classinfo: _ClassInfo, *, name: str = 'Object') -
 
     >>> from pyvista_validation import check_type
     >>> check_type({'spam': 'eggs'}, (dict, set))
+    {'spam': 'eggs'}
 
     """
     return check_instance(obj, classinfo, allow_subclass=False, name=name)
@@ -1182,11 +1209,13 @@ def check_iterable_items(
 
     >>> from pyvista_validation import check_iterable_items
     >>> check_iterable_items((1, 2, 3.0), (int, float))
+    (1, 2, 3.0)
 
     Check if a ``list`` only has ``list`` elements.
 
     >>> import pyvista_validation
     >>> check_iterable_items([[1], [2], [3]], list)
+    [[1], [2], [3]]
 
     """
     items = check_iterable(iterable_obj, name=name)
@@ -1232,6 +1261,7 @@ def check_contains(
 
     >>> from pyvista_validation import check_contains
     >>> check_contains(['A', 'B', 'C'], must_contain='A')
+    'A'
 
     """
     if must_contain not in container:
@@ -1259,7 +1289,7 @@ def check_length(
     By default, this function operates on multidimensional arrays,
     where ``len(arr)`` may differ from the number of elements in the
     array. For one-dimensional cases (where ``len(arr) == arr.size``),
-    set ``must_be_1D=True``.
+    set ``must_be_1d=True``.
 
     Parameters
     ----------
@@ -1279,7 +1309,7 @@ def check_length(
 
     must_be_1d : bool, default: False
         If ``True``, check if the shape of the array is one-dimensional,
-        that is, that the array's shape is ``(1,)``.
+        that is, that the array's shape is ``(N,)``.
 
     allow_scalar : bool, default: False
         If ``True``, a scalar input will be reshaped to have a length
@@ -1310,20 +1340,23 @@ def check_length(
 
     >>> from pyvista_validation import check_length
     >>> check_length([1, 2], exact_length=[2, 3])
+    [1, 2]
 
     Check if an array has a minimum length of 3.
 
     >>> check_length((1, 2, 3), min_length=3)
+    (1, 2, 3)
 
     Check if a multidimensional array has a maximum length of 2.
 
     >>> check_length([[1, 2, 3], [4, 5, 6]], max_length=2)
+    [[1, 2, 3], [4, 5, 6]]
 
     """
     sized: float | _Scalar | Sized = sized_input
     if allow_scalar:
         # Reshape to 1D
-        if isinstance(sized, (float, int)):
+        if isinstance(sized, (float, int, np.number, np.bool_)):
             sized = [sized]
         elif isinstance(sized, np.ndarray):
             array = cast('npt.NDArray[_Scalar]', sized)

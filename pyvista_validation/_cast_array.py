@@ -163,18 +163,15 @@ def _cast_to_numpy(
         Array to cast.
 
     as_any : bool, default: True
-        Allow subclasses of ``np.ndarray`` to pass through without
-        making a copy.
+        Allow subclasses of ``np.ndarray`` to pass through. Otherwise, a
+        subclass is returned as a base ``np.ndarray`` view of the same data.
 
     dtype : DTypeLike, optional
         The data-type of the returned array.
 
     copy : bool, default: False
-        If ``True``, a copy of the array is returned. A copy is always
-        returned if the array:
-
-            * is a nested sequence
-            * is a subclass of ``np.ndarray`` and ``as_any`` is ``False``.
+        If ``True``, a copy of the array is returned. A new array is always
+        made from a sequence, and one may also be made to satisfy ``dtype``.
 
     must_be_real : bool, default: True
         Raise a ``TypeError`` if the array does not have real numbers, that is
@@ -197,8 +194,8 @@ def _cast_to_numpy(
     """
     try:
         out = _asarray(arr, dtype=dtype, as_any=as_any)
-        if copy and out is arr:
-            # we requested a copy but didn't end up with one
+        # A base-class view of a subclass still shares its memory
+        if copy and isinstance(arr, np.ndarray) and np.may_share_memory(out, arr):
             out = out.copy()
     except ValueError as e:
         msg = f'Input cannot be cast as {np.ndarray}.'
