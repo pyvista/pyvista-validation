@@ -151,9 +151,29 @@ static PyObject *array_core(PyObject *const *a)
         DECLINE;
     }
 
-    /* The value checks: not yet in C */
-    if (nonnegative || finite || integer || GIVEN(a[A_RANGE]) || sorted_) {
+    /* The element-wise checks, one pass */
+    values_spec spec = {nonnegative, finite, integer, 0, 0};
+    if (GIVEN(a[A_RANGE])) {
+        int strict_low = truth(a[A_STRICT_LOWER], 0), strict_high = truth(a[A_STRICT_UPPER], 0);
+        if (strict_low < 0 || strict_high < 0 || !range_bounds(a[A_RANGE], &spec.low, &spec.high)) {
+            PyErr_Clear();
+            DECLINE;
+        }
+        spec.low_set = spec.high_set = 1;
+        spec.strict_low = strict_low;
+        spec.strict_high = strict_high;
+    }
+    if ((spec.nonnegative || spec.finite || spec.integer || spec.low_set) &&
+        values_ok(array, &spec) != 1) {
         DECLINE;
+    }
+    if (sorted_) {
+        int ascending, strict;
+        PyObject *axis;
+        if (!read_sorted_spec(a[A_SORTED], &ascending, &strict, &axis) ||
+            sorted_ok(array, ascending, strict, axis) != 1) {
+            DECLINE;
+        }
     }
 
     if (GIVEN(a[A_DTYPE_OUT])) {
