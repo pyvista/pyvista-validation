@@ -48,7 +48,7 @@ jobs:
       with:
         enable-cache: false
     - run: uv sync --group dev --extra all --python ${{ matrix.python-version }}
-    - run: uv run pytest tests/ --cov --cov-report=xml
+    - run: uv run pytest tests/ --ignore=tests/typing --cov --cov-report=xml
     - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f   # v7.0.0
       with:
         files: ./coverage.xml
@@ -97,7 +97,7 @@ jobs:
         enable-cache: false
     - run: uv sync --group dev --python ${{ matrix.python-version }}
     - run: uv run python -c "import pyvista_validation, sys; assert not [m for m in sys.modules if m.startswith(('vtkmodules', 'scipy'))]"
-    - run: uv run pytest tests/ --no-cov
+    - run: uv run pytest tests/ --ignore=tests/typing --no-cov
 
   downstream:
     name: Downstream PyVista

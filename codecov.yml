@@ -16,11 +16,15 @@ coverage:
         target: 95%
       typing:
         flags: [typing]
-        target: 100%
+        # mypy scores every line that uses a type variable as imprecise, so the overloads
+        # that return the dtype they are given keep this just short of 100%.
+        target: 99%
     patch:
       tests:
         flags: [tests]
         target: 95%
       typing:
         flags: [typing]
-        target: 100%
+        # mypy scores every line that uses a type variable as imprecise, so the overloads
+        # that return the dtype they are given keep this just short of 100%.
+        target: 99%

@@ -70,6 +70,10 @@ omit = ['*/_version.py', 'pyvista_validation/_typing/*']
 parallel = true
 source = ['pyvista_validation']
 
+[tool.coverage.report]
+# Overload stubs are signatures for type checkers; their bodies never run.
+exclude_also = ['^\\s*@overload$']
+
 [tool.mypy]
 enable_error_code = ['ignore-without-code', 'redundant-expr', 'truthy-bool']
 packages = ['pyvista_validation']
