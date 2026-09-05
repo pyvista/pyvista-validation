@@ -340,12 +340,9 @@ static int subdtype_ok(PyArray_Descr *descr, PyObject *base)
 static PyObject *cast_to(PyArrayObject *array, PyObject *dtype)
 {
     PyArray_Descr *descr = NULL;
-    if (!PyArray_DescrConverter2(dtype, &descr)) {
+    if (!PyArray_DescrConverter(dtype, &descr)) {
         PyErr_Clear();
         RETURN_FALLBACK;
-    }
-    if (descr == NULL) {
-        return Py_NewRef(array);
     }
     PyObject *out = PyArray_FromArray(array, descr, NPY_ARRAY_FORCECAST);
     if (out == NULL) {

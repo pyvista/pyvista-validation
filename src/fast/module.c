@@ -244,18 +244,20 @@ static PyObject *fast_wrap(PyObject *module, PyObject *const *args, Py_ssize_t n
     /* CPython reads `name(...)\n--\n\n` off the front of the docstring as the signature. */
     size_t size = strlen(name) + strlen(signature) + 5 + strlen(docstring) + 1;
     char *text = malloc(size);
+    char *copied_name = duplicate(name);
     PyMethodDef *def = calloc(1, sizeof(PyMethodDef));
     Context *context = (Context *)PyType_GenericAlloc(ContextType, 0);
-    if (text == NULL || def == NULL || context == NULL) {
+    if (text == NULL || copied_name == NULL || def == NULL || context == NULL) {
         Py_DECREF(doc);
         Py_XDECREF(context);
         free(text);
+        free(copied_name);
         free(def);
         return PyErr_NoMemory();
     }
     snprintf(text, size, "%s%s\n--\n\n%s", name, signature, docstring);
     Py_DECREF(doc);
-    def->ml_name = duplicate(name);
+    def->ml_name = copied_name;
     def->ml_meth = (PyCFunction)(void (*)(void))dispatch;
     def->ml_flags = METH_FASTCALL | METH_KEYWORDS;
     def->ml_doc = text;
