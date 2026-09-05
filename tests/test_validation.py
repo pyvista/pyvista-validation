@@ -1856,8 +1856,10 @@ def test_validate_arrayN_unsigned_constraints_cannot_be_disabled(kwarg):  # noqa
 
 
 def test_validate_arrayN_unsigned_rejects_values_the_dtype_cannot_hold():  # noqa: N802
-    with pytest.raises(ValueError, match='less than or equal to 9223372036854775807'):
-        validate_arrayN_unsigned([2**63])
+    # The default output dtype is the platform's int, which is 32-bit on some
+    limit = np.iinfo(np.dtype(int)).max
+    with pytest.raises(ValueError, match=f'less than or equal to {limit}'):
+        validate_arrayN_unsigned([limit + 1])
     with pytest.raises(ValueError, match='less than or equal to 255'):
         validate_arrayN_unsigned([300], dtype_out='uint8')
     assert validate_arrayN_unsigned([255], dtype_out='uint8').tolist() == [255]
@@ -1925,7 +1927,7 @@ def test_validate_axes_normalize_returns_unit_float_vectors():
     axes = validate_axes(np.diag([2, 3, 4]))
     assert axes.dtype == np.float64
     assert np.array_equal(axes, np.eye(3))
-    assert validate_axes(np.eye(3, dtype=int), normalize=False).dtype == np.int64
+    assert validate_axes(np.eye(3, dtype=int), normalize=False).dtype == np.dtype(int)
 
 
 @pytest.mark.parametrize(
