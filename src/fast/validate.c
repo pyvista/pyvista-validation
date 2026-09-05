@@ -535,7 +535,9 @@ static params TRANSFORM3X3_PARAMS = {TRANSFORM_NAMES, NULL, 3, 1, 1};
 
 static PyObject *lazy_module;
 
-/* A class from pyvista_validation._lazy_import, imported on first use like Python does. */
+/* A class from pyvista_validation._lazy_import, but only once that module has resolved it.
+ * Reading the name off the module would run its __getattr__, which imports VTK or SciPy on a
+ * call that may need neither; the first object of one of those types goes to Python instead. */
 static PyObject *lazy_class(const char *name)
 {
     if (lazy_module == NULL) {
@@ -545,11 +547,12 @@ static PyObject *lazy_class(const char *name)
             return NULL;
         }
     }
-    PyObject *cls = PyObject_GetAttrString(lazy_module, name);
-    if (cls == NULL) {
-        PyErr_Clear();
+    PyObject *namespace = PyModule_GetDict(lazy_module);
+    if (namespace == NULL) {
+        return NULL;
     }
-    return cls;
+    PyObject *cls = PyDict_GetItemString(namespace, name);
+    return cls == NULL ? NULL : Py_NewRef(cls);
 }
 
 static int is_lazy_instance(PyObject *obj, const char *name)

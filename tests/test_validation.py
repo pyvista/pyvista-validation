@@ -2337,9 +2337,22 @@ def test_lazy_import_placeholder_when_the_vtk_backend_is_missing(
         validate_transform4x4('abc')
 
 
+class ArrayLike:
+    """An object NumPy converts through the array protocol, of no type this package knows."""
+
+    def __array__(self, dtype=None, copy=None):
+        """Return the identity matrix this object stands for."""
+        return np.eye(3)
+
+
+@pytest.mark.parametrize(
+    'make',
+    [lambda: np.eye(3), lambda: np.eye(3).tolist(), ArrayLike, lambda: memoryview(np.eye(3))],
+    ids=['ndarray', 'list', 'array-protocol', 'memoryview'],
+)
 @pytest.mark.parametrize(
     'function', [validate_transform4x4, validate_transform3x3, validate_rotation]
 )
-def test_array_input_does_not_resolve_optional_dependencies(function, unresolved_lazy_names):
-    function(np.eye(3))
+def test_array_input_does_not_resolve_optional_dependencies(function, make, unresolved_lazy_names):
+    function(make())
     assert not any(name in vars(_lazy_import) for name in LAZY_NAMES)
