@@ -27,6 +27,7 @@ from pyvista_validation import check_string
 from pyvista_validation import check_subdtype
 from pyvista_validation import check_type
 from pyvista_validation._typing import _Scalar
+from pyvista_validation.check import _dtype_of
 from pyvista_validation.check import _issubdtype
 from pyvista_validation.check import _Shape
 from pyvista_validation.check import _shape_of
@@ -89,6 +90,10 @@ assert_types(_validate_real_value(np.int32(1)), npt.NDArray[_Scalar])
 assert_types(_validate_shape_value((1, 2)), _Shape)
 assert_types(_validate_shape_value(3), _Shape)
 assert_types(_validate_shape_value(()), _Shape)
+# np.generic cannot be subscripted at runtime, so the type is quoted: the checker holds the
+# case to it and the runtime half is skipped.
+assert_types(_dtype_of(np.zeros(2)), 'np.dtype[np.generic[object]]')
+assert_types(_dtype_of('f8'), 'np.dtype[np.generic[object]]')
 assert_types(_shape_of([1, 2]), tuple[int, ...])
 assert_types(_issubdtype(np.dtype('f8'), np.floating), bool)
 assert_types(_union_members(int | float), tuple[type[object], ...])
