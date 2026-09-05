@@ -15,8 +15,9 @@ static PyObject *as_array(PyObject *obj, int as_any, int copy)
         Py_DECREF(array);
         RETURN_FALLBACK;
     }
-    if (copy && PyArray_Check(obj)) {
-        /* ndarray.copy() in its default C order; a sequence already became a new array */
+    /* An empty array shares no memory, so _cast_to_numpy leaves it alone; a sequence has
+     * already become a new array */
+    if (copy && PyArray_Check(obj) && PyArray_SIZE((PyArrayObject *)array) > 0) {
         PyObject *copied = PyArray_NewCopy((PyArrayObject *)array, NPY_CORDER);
         Py_DECREF(array);
         if (copied == NULL) {
