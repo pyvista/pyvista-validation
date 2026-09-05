@@ -144,9 +144,8 @@ def main() -> None:
         print('| --- | ---: | ---: | ---: |')
         for name, after in results.items():
             if name in before:
-                print(
-                    f'| `{name}` | {fmt(before[name])} | {fmt(after)} | {before[name] / after:.1f}x |'
-                )
+                speedup = f'{before[name] / after:.1f}x'
+                print(f'| `{name}` | {fmt(before[name])} | {fmt(after)} | {speedup} |')
     else:
         for name, value in results.items():
             print(f'{name:40s} {fmt(value):>8s} µs')
