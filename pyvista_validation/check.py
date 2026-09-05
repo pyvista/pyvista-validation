@@ -144,11 +144,6 @@ def check_subdtype(
 def check_real(array: _ArrayT, /, *, name: str = 'Array') -> _ArrayT:
     """Check if an array has real numbers (float or integer type).
 
-    Returns
-    -------
-    array_like
-        The input, unchanged.
-
     Notes
     -----
     -   Boolean data types are not considered real and will raise an error.
@@ -163,6 +158,11 @@ def check_real(array: _ArrayT, /, *, name: str = 'Array') -> _ArrayT:
 
     name : str, default: "Array"
         Variable name to use in the error messages if any are raised.
+
+    Returns
+    -------
+    array_like
+        The input, unchanged.
 
     Raises
     ------
@@ -794,11 +794,6 @@ def check_number(num: object, /, *, name: str = 'Object') -> object:
     A number is any instance of ``numbers.Number``, for example,  ``int``,
     ``float``, and ``complex``.
 
-    Returns
-    -------
-    Number
-        The input, unchanged. Type checkers see it as a number.
-
     Notes
     -----
     A NumPy ``ndarray`` is not an instance of ``Number``.
@@ -810,6 +805,11 @@ def check_number(num: object, /, *, name: str = 'Object') -> object:
 
     name : str, default: "Object"
         Variable name to use in the error messages if any are raised.
+
+    Returns
+    -------
+    Number
+        The input, unchanged. Type checkers see it as a number.
 
     Raises
     ------
@@ -1080,11 +1080,6 @@ def check_type(obj: _ObjectT, /, classinfo: _ClassInfo, *, name: str = ...) -> _
 def check_type(obj: object, /, classinfo: _ClassInfo, *, name: str = 'Object') -> object:
     """Check if an object is one of the given type or types.
 
-    Returns
-    -------
-    object
-        The input, unchanged. Type checkers see it as an instance of ``classinfo``.
-
     Notes
     -----
     The use of :func:`check_instance` is generally preferred as it
@@ -1101,6 +1096,11 @@ def check_type(obj: object, /, classinfo: _ClassInfo, *, name: str = 'Object') -
 
     name : str, default: "Object"
         Variable name to use in the error messages if any are raised.
+
+    Returns
+    -------
+    object
+        The input, unchanged. Type checkers see it as an instance of ``classinfo``.
 
     Raises
     ------
@@ -1251,11 +1251,6 @@ def check_length(
 ) -> _SizedT:
     """Check if the length of an array meets specific requirements.
 
-    Returns
-    -------
-    Sized
-        The input, unchanged.
-
     Notes
     -----
     By default, this function operates on multidimensional arrays,
@@ -1290,6 +1285,11 @@ def check_length(
 
     name : str, default: "Array"
         Variable name to use in the error messages if any are raised.
+
+    Returns
+    -------
+    Sized
+        The input, unchanged.
 
     Raises
     ------
