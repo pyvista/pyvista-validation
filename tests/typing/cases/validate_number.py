@@ -25,6 +25,10 @@ assert_types(validate_number(1, dtype_out=int), int)
 assert_types(validate_number(1, dtype_out=float), float)
 assert_types(validate_number(1, dtype_out='float32'), bool | int | float)
 assert_types(validate_number(np.float32(1.5), to_list=False), npt.NDArray[np.float32])
+assert_types(
+    validate_number(np.bool_(bool(1)), must_be_real=False, to_list=False),
+    npt.NDArray[np.bool_],
+)
 assert_types(validate_number(True, must_be_real=False, to_list=False), npt.NDArray[np.bool_])
 assert_types(validate_number(1, to_list=False), npt.NDArray[np.int64])
 assert_types(validate_number(1.5, to_list=False), npt.NDArray[np.float64])

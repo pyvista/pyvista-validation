@@ -42,6 +42,11 @@ _Scalar = (
 )
 _Floating = np.float64 | np.float32 | np.float16
 _Integer = np.int64 | np.int32 | np.int16 | np.int8 | np.uint64 | np.uint32 | np.uint16 | np.uint8
+# What ``must_be_real`` admits: to NumPy a boolean is not a number.
+_Real = _Floating | _Integer
+# Text, which NumPy holds as fixed-width unicode or bytes; accepted with ``must_be_real=False``.
+_Text = np.str_ | np.bytes_
+_AnyScalar = _Scalar | _Text
 
 # Anything np.dtype() accepts for numeric data: a scalar type, a dtype, or a dtype name.
 if TYPE_CHECKING:
@@ -87,6 +92,12 @@ _NestedFloat = (
     | Sequence[Sequence[Sequence[float]]]
     | Sequence[Sequence[Sequence[Sequence[float]]]]
 )
+_NestedStr = (
+    Sequence[str]
+    | Sequence[Sequence[str]]
+    | Sequence[Sequence[Sequence[str]]]
+    | Sequence[Sequence[Sequence[Sequence[str]]]]
+)
 
 # What ndarray.tolist() returns for each dtype family, up to four dimensions.
 _NestedListBool = (
@@ -114,6 +125,13 @@ _NestedTupleFloat = (
     | tuple[tuple[tuple[float, ...], ...], ...]
     | tuple[tuple[tuple[tuple[float, ...], ...], ...], ...]
 )
+_NestedListStr = list[str] | list[list[str]] | list[list[list[str]]] | list[list[list[list[str]]]]
+_NestedTupleStr = (
+    tuple[str, ...]
+    | tuple[tuple[str, ...], ...]
+    | tuple[tuple[tuple[str, ...], ...], ...]
+    | tuple[tuple[tuple[tuple[str, ...], ...], ...], ...]
+)
 _FiniteNestedList = _NestedListFloat
 _FiniteNestedTuple = _NestedTupleFloat
 
@@ -126,6 +144,11 @@ _ToTupleBool = bool | _NestedTupleBool
 _ToTupleInt = int | _NestedTupleInt
 _ToTupleFloat = float | _NestedTupleFloat
 _ToTuple = _ToTupleBool | _ToTupleInt | _ToTupleFloat
+_ToListStr = str | _NestedListStr
+_ToTupleStr = str | _NestedTupleStr
+# The list and tuple results once text is admitted too.
+_ToAnyList = _ToList | _ToListStr
+_ToAnyTuple = _ToTuple | _ToTupleStr
 
 # Sequences may mix Python and NumPy scalars, or hold arrays as their innermost items.
 # Spelled with ``Union`` because a ``types.UnionType`` cannot be subscripted on Python 3.10.
@@ -155,3 +178,26 @@ _ArrayLike = Union[
     _ArrayLike3D[NumberType],
     _ArrayLike4D[NumberType],
 ]
+
+# The same shapes once text is admitted: any array the package handles, scalars included.
+_AnyItem = Union[float, str, bytes, _AnyScalar]
+_AnyArrayLike1D = Union[
+    npt.NDArray[_AnyScalar], Sequence[_AnyItem], Sequence[npt.NDArray[_AnyScalar]]
+]
+_AnyArrayLike2D = Union[
+    npt.NDArray[_AnyScalar],
+    Sequence[Sequence[_AnyItem]],
+    Sequence[Sequence[npt.NDArray[_AnyScalar]]],
+]
+_AnyArrayLike3D = Union[
+    npt.NDArray[_AnyScalar],
+    Sequence[Sequence[Sequence[_AnyItem]]],
+    Sequence[Sequence[Sequence[npt.NDArray[_AnyScalar]]]],
+]
+_AnyArrayLike4D = Union[
+    npt.NDArray[_AnyScalar],
+    Sequence[Sequence[Sequence[Sequence[_AnyItem]]]],
+    Sequence[Sequence[Sequence[Sequence[npt.NDArray[_AnyScalar]]]]],
+]
+_AnyArrayLike = Union[_AnyArrayLike1D, _AnyArrayLike2D, _AnyArrayLike3D, _AnyArrayLike4D]
+_AnyArrayLikeOrScalar = Union[float, str, bytes, _AnyScalar, _AnyArrayLike]

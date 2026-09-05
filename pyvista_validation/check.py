@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     import numpy.typing as npt
 
     from pyvista_validation._typing import VectorLike
+    from pyvista_validation._typing import _AnyArrayLikeOrScalar
     from pyvista_validation._typing import _ArrayLikeOrScalar
     from pyvista_validation._typing import _DTypeLike
     from pyvista_validation._typing import _Scalar
@@ -52,10 +53,12 @@ _ClassInfo = type[object] | tuple[type[object], ...] | UnionType
 
 # Every check returns its input unchanged; these carry the input's static type through.
 _ArrayT = TypeVar('_ArrayT', bound='_ArrayLikeOrScalar', default='_ArrayLikeOrScalar')
+# For the checks that do not depend on the values being numbers.
+_AnyArrayT = TypeVar('_AnyArrayT', bound='_AnyArrayLikeOrScalar', default='_AnyArrayLikeOrScalar')
 _DTypeOrArrayT = TypeVar(
     '_DTypeOrArrayT',
-    bound='_DTypeLike | _ArrayLikeOrScalar',
-    default='_DTypeLike | _ArrayLikeOrScalar',
+    bound='_DTypeLike | _AnyArrayLikeOrScalar',
+    default='_DTypeLike | _AnyArrayLikeOrScalar',
 )
 _SizedT = TypeVar('_SizedT', bound='float | _Scalar | Sized', default='float | _Scalar | Sized')
 _NumberT = TypeVar('_NumberT', bound='float | _Scalar', default='float | _Scalar')
@@ -141,12 +144,12 @@ def check_subdtype(
     return input_obj
 
 
-def check_real(array: _ArrayT, /, *, name: str = 'Array') -> _ArrayT:
+def check_real(array: _AnyArrayT, /, *, name: str = 'Array') -> _AnyArrayT:
     """Check if an array has real numbers (float or integer type).
 
     Notes
     -----
-    -   Boolean data types are not considered real and will raise an error.
+    -   Boolean and text data types are not considered real and will raise an error.
     -   Arrays with ``infinity`` or ``NaN`` values are considered real and
         will not raise an error. Use :func:`check_finite` to check for
         finite values.
@@ -198,14 +201,14 @@ def check_real(array: _ArrayT, /, *, name: str = 'Array') -> _ArrayT:
 
 
 def check_sorted(
-    array: _ArrayT,
+    array: _AnyArrayT,
     /,
     *,
     ascending: bool = True,
     strict: bool = False,
     axis: int | None = -1,
     name: str = 'Array',
-) -> _ArrayT:
+) -> _AnyArrayT:
     """Check if an array's values are sorted.
 
     Parameters
@@ -274,8 +277,9 @@ def check_sorted(
             msg = f'Axis {axis} is out of bounds for ndim {ndim}.'
             raise ValueError(msg) from None
 
-    # Compare a view of the array along the axis with a view offset by one element
-    moved = np.moveaxis(array_, axis, -1)
+    # Compare a view of the array along the axis with a view offset by one element. NumPy
+    # orders text arrays too, but its stubs type the comparison per dtype family.
+    moved = cast('npt.NDArray[_Scalar]', np.moveaxis(array_, axis, -1))
     first_item = moved[..., :-1]
     second_item = moved[..., 1:]
 
@@ -635,12 +639,12 @@ def check_range(
 
 
 def check_shape(
-    array: _ArrayT,
+    array: _AnyArrayT,
     /,
     shape: _ShapeLike | list[_ShapeLike],
     *,
     name: str = 'Array',
-) -> _ArrayT:
+) -> _AnyArrayT:
     """Check if an array has the specified shape.
 
     Parameters
@@ -715,12 +719,12 @@ def check_shape(
 
 
 def check_ndim(
-    array: _ArrayT,
+    array: _AnyArrayT,
     /,
     ndim: int | VectorLike,
     *,
     name: str = 'Array',
-) -> _ArrayT:
+) -> _AnyArrayT:
     """Check if an array has the specified number of dimensions.
 
     .. note::
@@ -1387,7 +1391,7 @@ def _union_members(classinfo: _ClassInfo, /) -> tuple[type[object], ...]:
     return cast('tuple[type[object], ...]', get_args(classinfo))
 
 
-def _dtype_of(obj: _DTypeLike | _ArrayLikeOrScalar, /) -> np.dtype[np.generic[object]]:
+def _dtype_of(obj: _DTypeLike | _AnyArrayLikeOrScalar, /) -> np.dtype[np.generic[object]]:
     """Return the dtype of a dtype-like object, or of the array an array-like casts to."""
     try:
         return np.dtype(cast('_DTypeLike', obj))
@@ -1400,6 +1404,6 @@ def _issubdtype(dtype: np.dtype[np.generic[object]], base: _DTypeLike, /) -> boo
     return np.issubdtype(dtype, base)
 
 
-def _shape_of(array: _ArrayLikeOrScalar, /) -> tuple[int, ...]:
+def _shape_of(array: _AnyArrayLikeOrScalar, /) -> tuple[int, ...]:
     """Return the shape the input would have as an array, without copying it."""
     return np.shape(cast('npt.ArrayLike', array))

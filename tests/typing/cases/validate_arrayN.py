@@ -8,6 +8,7 @@ from type_assert import assert_types
 
 from pyvista_validation import validate_arrayN
 from pyvista_validation import validate_arrayN_unsigned
+from pyvista_validation._typing import _AnyScalar
 from pyvista_validation._typing import _Integer
 from pyvista_validation._typing import _Scalar
 
@@ -21,6 +22,17 @@ _ArrayNOut = (
     | tuple[float, ...]
 )
 _ArrayNUnsignedOut = npt.NDArray[_Integer] | list[int] | tuple[int, ...]
+_ArrayNAnyOut = (
+    npt.NDArray[_AnyScalar]
+    | list[bool]
+    | list[int]
+    | list[float]
+    | list[str]
+    | tuple[bool, ...]
+    | tuple[int, ...]
+    | tuple[float, ...]
+    | tuple[str, ...]
+)
 
 
 def flag() -> bool:
@@ -30,18 +42,25 @@ def flag() -> bool:
 
 assert_types(validate_arrayN(np.zeros(3, dtype=np.float32)), npt.NDArray[np.float32])
 assert_types(validate_arrayN([]), npt.NDArray[np.float64])
+assert_types(validate_arrayN(np.zeros(3) > 0, must_be_real=False), npt.NDArray[np.bool_])
 assert_types(validate_arrayN([True, False], must_be_real=False), npt.NDArray[np.bool_])
 assert_types(validate_arrayN([1, 2]), npt.NDArray[np.int64])
 assert_types(validate_arrayN([1.5, 2.5]), npt.NDArray[np.float64])
+assert_types(validate_arrayN(['a', 'b'], must_be_real=False), npt.NDArray[np.str_])
 assert_types(validate_arrayN([1, 2], dtype_out=np.float32), npt.NDArray[np.float32])
 assert_types(validate_arrayN([1, 2], dtype_out=bool), npt.NDArray[np.bool_])
 assert_types(validate_arrayN([1, 2], dtype_out=int), npt.NDArray[np.int64])
 assert_types(validate_arrayN([1, 2], dtype_out=float), npt.NDArray[np.float64])
 assert_types(validate_arrayN([1, 2], dtype_out='float32'), npt.NDArray[_Scalar])
+assert_types(
+    validate_arrayN(['a', 'b'], must_be_real=False, dtype_out='U1'),
+    npt.NDArray[_AnyScalar],
+)
 assert_types(validate_arrayN([], to_list=True), list[float])
 assert_types(validate_arrayN([True, False], must_be_real=False, to_list=True), list[bool])
 assert_types(validate_arrayN([1, 2], to_list=True), list[int])
 assert_types(validate_arrayN([1.5, 2.5], to_list=True), list[float])
+assert_types(validate_arrayN(['a', 'b'], must_be_real=False, to_list=True), list[str])
 assert_types(validate_arrayN([1, 2], dtype_out=bool, to_list=True), list[bool])
 assert_types(validate_arrayN([1, 2], dtype_out=int, to_list=True), list[int])
 assert_types(validate_arrayN([1, 2], dtype_out=float, to_list=True), list[float])
@@ -49,10 +68,15 @@ assert_types(
     validate_arrayN([1, 2], dtype_out='float32', to_list=True),
     list[bool] | list[int] | list[float],
 )
+assert_types(
+    validate_arrayN(['a', 'b'], must_be_real=False, dtype_out='U1', to_list=True),
+    list[bool] | list[int] | list[float] | list[str],
+)
 assert_types(validate_arrayN([], to_tuple=True), tuple[float, ...])
 assert_types(validate_arrayN([True, False], must_be_real=False, to_tuple=True), tuple[bool, ...])
 assert_types(validate_arrayN([1, 2], to_tuple=True), tuple[int, ...])
 assert_types(validate_arrayN([1.5, 2.5], to_tuple=True), tuple[float, ...])
+assert_types(validate_arrayN(['a', 'b'], must_be_real=False, to_tuple=True), tuple[str, ...])
 assert_types(validate_arrayN([1, 2], dtype_out=bool, to_tuple=True), tuple[bool, ...])
 assert_types(validate_arrayN([1, 2], dtype_out=int, to_tuple=True), tuple[int, ...])
 assert_types(validate_arrayN([1, 2], dtype_out=float, to_tuple=True), tuple[float, ...])
@@ -60,7 +84,12 @@ assert_types(
     validate_arrayN([1, 2], dtype_out='float32', to_tuple=True),
     tuple[bool, ...] | tuple[int, ...] | tuple[float, ...],
 )
+assert_types(
+    validate_arrayN(['a', 'b'], must_be_real=False, dtype_out='U1', to_tuple=True),
+    tuple[bool, ...] | tuple[int, ...] | tuple[float, ...] | tuple[str, ...],
+)
 assert_types(validate_arrayN([1, 2], to_list=flag()), _ArrayNOut)
+assert_types(validate_arrayN(['a', 'b'], must_be_real=False, to_list=flag()), _ArrayNAnyOut)
 assert_types(validate_arrayN(1), npt.NDArray[np.int64])
 assert_types(validate_arrayN([[1, 2]]), npt.NDArray[np.int64])
 assert_types(validate_arrayN(np.float32(1.5)), npt.NDArray[np.float32])

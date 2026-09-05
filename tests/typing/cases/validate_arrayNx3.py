@@ -7,6 +7,7 @@ import numpy.typing as npt
 from type_assert import assert_types
 
 from pyvista_validation import validate_arrayNx3
+from pyvista_validation._typing import _AnyScalar
 from pyvista_validation._typing import _Scalar
 
 _ArrayNx3Out = (
@@ -18,6 +19,17 @@ _ArrayNx3Out = (
     | tuple[tuple[int, int, int], ...]
     | tuple[tuple[float, float, float], ...]
 )
+_ArrayNx3AnyOut = (
+    npt.NDArray[_AnyScalar]
+    | list[list[bool]]
+    | list[list[int]]
+    | list[list[float]]
+    | list[list[str]]
+    | tuple[tuple[bool, bool, bool], ...]
+    | tuple[tuple[int, int, int], ...]
+    | tuple[tuple[float, float, float], ...]
+    | tuple[tuple[str, str, str], ...]
+)
 
 
 def flag() -> bool:
@@ -26,26 +38,40 @@ def flag() -> bool:
 
 
 assert_types(validate_arrayNx3(np.zeros((2, 3), dtype=np.float32)), npt.NDArray[np.float32])
+assert_types(validate_arrayNx3(np.zeros((2, 3)) > 0, must_be_real=False), npt.NDArray[np.bool_])
 assert_types(validate_arrayNx3([[True, False, True]], must_be_real=False), npt.NDArray[np.bool_])
 assert_types(validate_arrayNx3([[1, 2, 3]]), npt.NDArray[np.int64])
 assert_types(validate_arrayNx3([[1.5, 2.5, 3.5]]), npt.NDArray[np.float64])
+assert_types(validate_arrayNx3([['a', 'b', 'c']], must_be_real=False), npt.NDArray[np.str_])
 assert_types(validate_arrayNx3([[1, 2, 3]], dtype_out=np.float32), npt.NDArray[np.float32])
 assert_types(validate_arrayNx3([[1, 2, 3]], dtype_out=bool), npt.NDArray[np.bool_])
 assert_types(validate_arrayNx3([[1, 2, 3]], dtype_out=int), npt.NDArray[np.int64])
 assert_types(validate_arrayNx3([[1, 2, 3]], dtype_out=float), npt.NDArray[np.float64])
 assert_types(validate_arrayNx3([[1, 2, 3]], dtype_out='float32'), npt.NDArray[_Scalar])
 assert_types(
+    validate_arrayNx3([['a', 'b', 'c']], must_be_real=False, dtype_out='U1'),
+    npt.NDArray[_AnyScalar],
+)
+assert_types(
     validate_arrayNx3([[True, False, True]], must_be_real=False, to_list=True),
     list[list[bool]],
 )
 assert_types(validate_arrayNx3([[1, 2, 3]], to_list=True), list[list[int]])
 assert_types(validate_arrayNx3([[1.5, 2.5, 3.5]], to_list=True), list[list[float]])
+assert_types(
+    validate_arrayNx3([['a', 'b', 'c']], must_be_real=False, to_list=True),
+    list[list[str]],
+)
 assert_types(validate_arrayNx3([[1, 2, 3]], dtype_out=bool, to_list=True), list[list[bool]])
 assert_types(validate_arrayNx3([[1, 2, 3]], dtype_out=int, to_list=True), list[list[int]])
 assert_types(validate_arrayNx3([[1, 2, 3]], dtype_out=float, to_list=True), list[list[float]])
 assert_types(
     validate_arrayNx3([[1, 2, 3]], dtype_out='float32', to_list=True),
     list[list[bool]] | list[list[int]] | list[list[float]],
+)
+assert_types(
+    validate_arrayNx3([['a', 'b', 'c']], must_be_real=False, dtype_out='U1', to_list=True),
+    list[list[bool]] | list[list[int]] | list[list[float]] | list[list[str]],
 )
 assert_types(
     validate_arrayNx3([[True, False, True]], must_be_real=False, to_tuple=True),
@@ -55,6 +81,10 @@ assert_types(validate_arrayNx3([[1, 2, 3]], to_tuple=True), tuple[tuple[int, int
 assert_types(
     validate_arrayNx3([[1.5, 2.5, 3.5]], to_tuple=True),
     tuple[tuple[float, float, float], ...],
+)
+assert_types(
+    validate_arrayNx3([['a', 'b', 'c']], must_be_real=False, to_tuple=True),
+    tuple[tuple[str, str, str], ...],
 )
 assert_types(
     validate_arrayNx3([[1, 2, 3]], dtype_out=bool, to_tuple=True),
@@ -76,6 +106,19 @@ assert_types(
         | tuple[tuple[float, float, float], ...]
     ),
 )
+assert_types(
+    validate_arrayNx3([['a', 'b', 'c']], must_be_real=False, dtype_out='U1', to_tuple=True),
+    (
+        tuple[tuple[bool, bool, bool], ...]
+        | tuple[tuple[int, int, int], ...]
+        | tuple[tuple[float, float, float], ...]
+        | tuple[tuple[str, str, str], ...]
+    ),
+)
 assert_types(validate_arrayNx3([[1, 2, 3]], to_list=flag()), _ArrayNx3Out)
+assert_types(
+    validate_arrayNx3([['a', 'b', 'c']], must_be_real=False, to_list=flag()),
+    _ArrayNx3AnyOut,
+)
 assert_types(validate_arrayNx3([1, 2, 3]), npt.NDArray[np.int64])
 assert_types(validate_arrayNx3([[1, 2, 3]], reshape=False), npt.NDArray[np.int64])

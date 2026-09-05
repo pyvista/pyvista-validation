@@ -44,6 +44,7 @@ ONES: npt.NDArray[np.float64] = np.ones(2)
 INTS: npt.NDArray[np.int64] = np.ones(2, dtype=np.int64)
 MATRIX: npt.NDArray[np.int64] = np.array([[0, 1], [2, 3]])
 SCALAR: npt.NDArray[np.float64] = np.array(1.0)
+TEXT: npt.NDArray[np.str_] = np.array(['a', 'b'])
 
 
 def unknown() -> object:
@@ -69,10 +70,13 @@ assert_types(check_subdtype([1, 2], np.integer), list[int])
 assert_types(check_real([1.0]), list[float])
 assert_types(check_real(ONES), npt.NDArray[np.float64])
 assert_types(check_real(1), int)
+assert_types(check_real(TEXT), npt.NDArray[np.str_])
 assert_types(check_sorted([1, 2]), list[int])
 assert_types(check_sorted(MATRIX, axis=None), npt.NDArray[np.int64])
 assert_types(check_sorted(MATRIX, axis=0), npt.NDArray[np.int64])
 assert_types(check_sorted([2, 1], ascending=False, strict=True), list[int])
+assert_types(check_sorted(TEXT), npt.NDArray[np.str_])
+assert_types(check_sorted(['a', 'b']), list[str])
 assert_types(check_finite(1.0), float)
 assert_types(check_finite(ONES), npt.NDArray[np.float64])
 assert_types(check_integer([1.0, 2.0]), list[float])
@@ -88,9 +92,11 @@ assert_types(check_range(ONES, np.array([0.0, 2.0]), strict_lower=True), npt.NDA
 assert_types(check_shape([1, 2], 2), list[int])
 assert_types(check_shape([1, 2], [(2,), (3,)]), list[int])
 assert_types(check_shape(1, ()), int)
+assert_types(check_shape(TEXT, 2), npt.NDArray[np.str_])
 assert_types(check_ndim([1], 1), list[int])
 assert_types(check_ndim([[1]], [1, 2]), list[list[int]])
 assert_types(check_ndim(MATRIX, range(3)), npt.NDArray[np.int64])
+assert_types(check_ndim(['a'], 1), list[str])
 assert_types(check_number(1), int)
 assert_types(check_number(1.5), float)
 assert_types(check_number(np.int32(1)), np.int32)
@@ -136,6 +142,12 @@ assert_types(_validate_shape_value(()), _Shape)
 # case to it and the runtime half is skipped.
 assert_types(_dtype_of(np.zeros(2)), 'np.dtype[np.generic[object]]')
 assert_types(_dtype_of('f8'), 'np.dtype[np.generic[object]]')
+assert_types(_dtype_of(TEXT), 'np.dtype[np.generic[object]]')
 assert_types(_shape_of([1, 2]), tuple[int, ...])
+assert_types(_shape_of(['a', 'b']), tuple[int, ...])
 assert_types(_issubdtype(np.dtype('f8'), np.floating), bool)
 assert_types(_union_members(int | float), tuple[type[object], ...])
+
+SKIP_RUNTIME = {
+    'check_real(TEXT)': 'raises TypeError: text is not real, only the passthrough is typed',
+}

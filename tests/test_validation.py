@@ -687,6 +687,40 @@ def test_validate_array_non_numeric(array):
     assert validate_array(array, must_be_real=False)
 
 
+def test_validate_array_text():
+    array = validate_array(['b', 'a'], must_be_real=False)
+    assert array.dtype.type is np.str_
+    assert validate_array(['a', 'b'], must_be_real=False, to_list=True) == ['a', 'b']
+    kwargs = {'must_be_real': False, 'must_be_sorted': True, 'must_have_shape': 2}
+    assert validate_array(['a', 'b'], to_tuple=True, **kwargs) == ('a', 'b')
+    with pytest.raises(ValueError, match='must be sorted'):
+        validate_array(['b', 'a'], **kwargs)
+    # The value checks are for numbers
+    with pytest.raises(TypeError):
+        validate_array(['a'], must_be_real=False, must_be_nonnegative=True)
+
+
+def test_validate_families_accept_text():
+    assert validate_data_range(['a', 'b'], must_be_real=False) == ('a', 'b')
+    assert validate_arrayN(['a', 'b'], must_be_real=False, to_list=True) == ['a', 'b']
+    assert validate_array3(['a', 'b', 'c'], must_be_real=False, to_tuple=True) == ('a', 'b', 'c')
+    array = validate_arrayNx3([['a', 'b', 'c']], must_be_real=False, to_list=True)
+    assert array == [['a', 'b', 'c']]
+    with pytest.raises(TypeError, match='must have real numbers'):
+        validate_arrayN(['a', 'b'])
+
+
+def test_check_functions_accept_text():
+    text = np.array(['a', 'b'])
+    assert check_shape(text, 2) is text
+    assert check_ndim(text, 1) is text
+    assert check_sorted(text) is text
+    with pytest.raises(ValueError, match='must be sorted'):
+        check_sorted(['b', 'a'])
+    with pytest.raises(TypeError, match='must have real numbers'):
+        check_real(text)
+
+
 def test_check_instance_accepts_a_matching_instance():
     check_instance(0, int)
     check_instance(0.0, (int, float))
