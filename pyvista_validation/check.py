@@ -18,33 +18,34 @@ import numbers
 import reprlib
 from types import UnionType
 from typing import TYPE_CHECKING
-from typing import Any
 from typing import Union
 from typing import cast
 from typing import get_args
 from typing import get_origin
 
 import numpy as np
-import numpy.typing as npt
 
 from pyvista_validation._cast_array import _cast_to_numpy
 
 if TYPE_CHECKING:
-    from pyvista_validation._typing import NumberType
-    from pyvista_validation._typing import NumpyArray
+    import numpy.typing as npt
+
     from pyvista_validation._typing import VectorLike
-    from pyvista_validation._typing._aliases import _ArrayLikeOrScalar
-    from pyvista_validation._typing._array_like import _NumberType
+    from pyvista_validation._typing import _ArrayLikeOrScalar
+    from pyvista_validation._typing import _DTypeLike
+    from pyvista_validation._typing import _Scalar
 
 
 _Shape = tuple[()] | tuple[int, ...]
 _ShapeLike = int | _Shape
+# What isinstance() accepts, plus the union objects the type-based checks unpack.
+_ClassInfo = type[object] | tuple[type[object], ...] | UnionType
 
 
 def check_subdtype(
-    input_obj: npt.DTypeLike | _ArrayLikeOrScalar[NumberType],
+    input_obj: _DTypeLike | _ArrayLikeOrScalar,
     /,
-    base_dtype: npt.DTypeLike | tuple[npt.DTypeLike, ...] | list[npt.DTypeLike],
+    base_dtype: _DTypeLike | tuple[_DTypeLike, ...] | list[_DTypeLike],
     *,
     name: str = 'Input',
 ) -> None:
@@ -52,11 +53,11 @@ def check_subdtype(
 
     Parameters
     ----------
-    input_obj : float | ArrayLike[float] | numpy.typing.DTypeLike
+    input_obj : float | ArrayLike | DTypeLike
         ``dtype`` object (or object coercible to one) or an array-like object.
         If array-like, the ``dtype`` of the array is used.
 
-    base_dtype : numpy.typing.DTypeLike | Sequence[numpy.typing.DTypeLike]
+    base_dtype : DTypeLike | Sequence[DTypeLike]
         ``dtype``-like object or a sequence of ``dtype``-like objects. The ``input_obj``
         must be a subtype of this value. If a sequence, ``input_obj`` must be a
         subtype of at least one of the specified ``dtypes``.
@@ -92,16 +93,10 @@ def check_subdtype(
     >>> check_subdtype(array, np.integer)
 
     """
-    input_dtype: npt.DTypeLike
-    try:
-        input_dtype = np.dtype(input_obj)  # type: ignore[arg-type]
-    except TypeError:
-        input_dtype = np.asanyarray(input_obj).dtype
-
+    input_dtype = _dtype_of(input_obj)
     if not isinstance(base_dtype, (tuple, list)):
         base_dtype = [base_dtype]
-
-    if not any(np.issubdtype(input_dtype, base) for base in base_dtype):
+    if not any(_issubdtype(input_dtype, base) for base in base_dtype):
         # Not a subdtype, so raise error
         msg = f"{name} has incorrect dtype of '{input_dtype.name}'. "
         if len(base_dtype) == 1:
@@ -111,7 +106,7 @@ def check_subdtype(
         raise TypeError(msg)
 
 
-def check_real(array: _ArrayLikeOrScalar[NumberType], /, *, name: str = 'Array') -> None:
+def check_real(array: _ArrayLikeOrScalar, /, *, name: str = 'Array') -> None:
     """Check if an array has real numbers (float or integer type).
 
     Notes
@@ -123,7 +118,7 @@ def check_real(array: _ArrayLikeOrScalar[NumberType], /, *, name: str = 'Array')
 
     Parameters
     ----------
-    array : float | ArrayLike[float]
+    array : float | ArrayLike
         Number or array to check.
 
     name : str, default: "Array"
@@ -152,17 +147,8 @@ def check_real(array: _ArrayLikeOrScalar[NumberType], /, *, name: str = 'Array')
 
     """
     array = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
-
-    # Return early for common cases.
-    # ``np.longlong`` is listed separately from ``np.int64``: on LP64 platforms they are
-    # distinct scalar types (C ``long long`` vs C ``long``) and ``in`` compares type
-    # objects by identity, so ``longlong`` would otherwise miss this fast path. VTK id
-    # arrays (cells, faces, connectivity) are ``longlong``, so this is a hot case.
-    if array.dtype.type in [np.int32, np.int64, np.longlong, np.float32, np.float64]:
+    if array.dtype.type in (np.int32, np.int64, np.longlong, np.float32, np.float64):
         return
-
-    # Do not use np.isreal as it will fail in some cases (e.g. scalars).
-    # Check dtype directly instead
     try:
         check_subdtype(array, (np.floating, np.integer), name=name)
     except TypeError as e:
@@ -171,19 +157,19 @@ def check_real(array: _ArrayLikeOrScalar[NumberType], /, *, name: str = 'Array')
 
 
 def check_sorted(
-    array: _ArrayLikeOrScalar[NumberType],
+    array: _ArrayLikeOrScalar,
     /,
     *,
     ascending: bool = True,
     strict: bool = False,
-    axis: int = -1,
+    axis: int | None = -1,
     name: str = 'Array',
 ) -> None:
     """Check if an array's values are sorted.
 
     Parameters
     ----------
-    array : float | ArrayLike[float]
+    array : float | ArrayLike
         Number or array to check.
 
     ascending : bool, default: True
@@ -222,14 +208,17 @@ def check_sorted(
 
     """
     array = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
-
     ndim = array.ndim
     if ndim == 0:
         # Scalars are always sorted
         return
 
-    # Validate axis
-    if axis not in [-1, None]:
+    if axis is None:
+        # Emulate np.sort(), which flattens array when axis is None
+        array = array.ravel(order='A')
+        ndim = 1
+        axis = 0
+    elif axis != -1:
         check_number(axis, name='Axis')
         check_integer(axis, name='Axis')
         axis = int(axis)
@@ -239,21 +228,10 @@ def check_sorted(
             msg = f'Axis {axis} is out of bounds for ndim {ndim}.'
             raise ValueError(msg) from None
 
-    if axis is None and ndim >= 1:  # type: ignore[unreachable]
-        # Emulate np.sort(), which flattens array when axis is None
-        array = array.ravel(order='A')  # type: ignore[unreachable]
-        ndim = 1
-        axis = 0
-
-    # Create slicers to get a view along an axis
-    # Create two slicers to compare consecutive elements with each other
-    first_slice = [slice(None)] * ndim
-    first_slice[axis] = slice(None, -1)
-    first_item = array[tuple(first_slice)]
-
-    second_slice = [slice(None)] * ndim
-    second_slice[axis] = slice(1, None)
-    second_item = array[tuple(second_slice)]
+    # Compare a view of the array along the axis with a view offset by one element
+    moved = np.moveaxis(array, axis, -1)
+    first_item = moved[..., :-1]
+    second_item = moved[..., 1:]
 
     if ascending and not strict:
         is_sorted = np.all(first_item <= second_item)
@@ -276,12 +254,12 @@ def check_sorted(
         raise ValueError(msg)
 
 
-def check_finite(array: _ArrayLikeOrScalar[NumberType], /, *, name: str = 'Array') -> None:
+def check_finite(array: _ArrayLikeOrScalar, /, *, name: str = 'Array') -> None:
     """Check if an array has finite values, that is, no NaN or Inf values.
 
     Parameters
     ----------
-    array : float | ArrayLike[float]
+    array : float | ArrayLike
         Number or array to check.
 
     name : str, default: "Array"
@@ -311,7 +289,7 @@ def check_finite(array: _ArrayLikeOrScalar[NumberType], /, *, name: str = 'Array
 
 
 def check_integer(
-    array: _ArrayLikeOrScalar[NumberType],
+    array: _ArrayLikeOrScalar,
     /,
     *,
     strict: bool = False,
@@ -321,7 +299,7 @@ def check_integer(
 
     Parameters
     ----------
-    array : float | ArrayLike[float]
+    array : float | ArrayLike
         Number or array to check.
 
     strict : bool, default: False
@@ -361,12 +339,12 @@ def check_integer(
         raise ValueError(msg)
 
 
-def check_nonnegative(array: _ArrayLikeOrScalar[NumberType], /, *, name: str = 'Array') -> None:
+def check_nonnegative(array: _ArrayLikeOrScalar, /, *, name: str = 'Array') -> None:
     """Check if an array's elements are all nonnegative.
 
     Parameters
     ----------
-    array : float | ArrayLike[float]
+    array : float | ArrayLike
         Number or array to check.
 
     name : str, default: "Array"
@@ -393,17 +371,18 @@ def check_nonnegative(array: _ArrayLikeOrScalar[NumberType], /, *, name: str = '
     check_greater_than(array, 0, strict=False, name=name)
 
 
-def _validate_real_value(scalar: float, name: str = 'Value') -> NumpyArray[float]:
-    valid_scalar = _cast_to_numpy(scalar)
+def _validate_real_value(scalar: float | _Scalar, name: str = 'Value') -> npt.NDArray[_Scalar]:
+    """Cast a real scalar to a 0-D array, raising if it is not a real number."""
+    valid_scalar: npt.NDArray[_Scalar] = _cast_to_numpy(scalar)
     check_shape(valid_scalar, (), name=name)
     check_real(valid_scalar, name=name)
     return valid_scalar
 
 
 def check_greater_than(
-    array: _ArrayLikeOrScalar[NumberType],
+    array: _ArrayLikeOrScalar,
     /,
-    value: float,
+    value: float | _Scalar,
     *,
     strict: bool = True,
     name: str = 'Array',
@@ -412,7 +391,7 @@ def check_greater_than(
 
     Parameters
     ----------
-    array : float | ArrayLike[float]
+    array : float | ArrayLike
         Number or array to check.
 
     value : float
@@ -456,9 +435,9 @@ def check_greater_than(
 
 
 def check_less_than(
-    array: _ArrayLikeOrScalar[NumberType],
+    array: _ArrayLikeOrScalar,
     /,
-    value: float,
+    value: float | _Scalar,
     *,
     strict: bool = True,
     name: str = 'Array',
@@ -467,7 +446,7 @@ def check_less_than(
 
     Parameters
     ----------
-    array : float | ArrayLike[float]
+    array : float | ArrayLike
         Number or array to check.
 
     value : float
@@ -512,9 +491,9 @@ def check_less_than(
 
 
 def check_range(
-    array: _ArrayLikeOrScalar[NumberType],
+    array: _ArrayLikeOrScalar,
     /,
-    rng: VectorLike[_NumberType],
+    rng: VectorLike,
     *,
     strict_lower: bool = False,
     strict_upper: bool = False,
@@ -524,10 +503,10 @@ def check_range(
 
     Parameters
     ----------
-    array : float | ArrayLike[float]
+    array : float | ArrayLike
         Number or array to check.
 
-    rng : VectorLike[float], optional
+    rng : VectorLike, optional
         Vector with two elements ``[min, max]`` specifying the minimum
         and maximum data values allowed, respectively. By default, the
         range endpoints are inclusive, that is, values must be >= min
@@ -569,12 +548,12 @@ def check_range(
     check_sorted(rng, name='Range')
 
     array = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
-    check_greater_than(array, rng[0], strict=strict_lower, name=name)
-    check_less_than(array, rng[1], strict=strict_upper, name=name)
+    check_greater_than(array, rng.item(0), strict=strict_lower, name=name)
+    check_less_than(array, rng.item(1), strict=strict_upper, name=name)
 
 
 def check_shape(
-    array: _ArrayLikeOrScalar[NumberType],
+    array: _ArrayLikeOrScalar,
     /,
     shape: _ShapeLike | list[_ShapeLike],
     *,
@@ -584,7 +563,7 @@ def check_shape(
 
     Parameters
     ----------
-    array : float | ArrayLike[float]
+    array : float | ArrayLike
         Number or array to check.
 
     shape : ShapeLike | list[ShapeLike]
@@ -634,7 +613,7 @@ def check_shape(
     if not isinstance(shape, list):
         shape = [shape]
 
-    array_shape = np.shape(array)  # type: ignore[arg-type]
+    array_shape = _shape_of(array)
     for input_shape in shape:
         valid_shape = _validate_shape_value(input_shape)
         if _shape_is_allowed(array_shape, valid_shape):
@@ -649,9 +628,9 @@ def check_shape(
 
 
 def check_ndim(
-    array: _ArrayLikeOrScalar[NumberType],
+    array: _ArrayLikeOrScalar,
     /,
-    ndim: int | VectorLike[int],
+    ndim: int | VectorLike,
     *,
     name: str = 'Array',
 ) -> None:
@@ -662,7 +641,7 @@ def check_ndim(
 
     Parameters
     ----------
-    array : float | ArrayLike[float]
+    array : float | ArrayLike
         Number or array to check.
 
     ndim : int | Sequence[int], optional
@@ -697,18 +676,12 @@ def check_ndim(
     >>> check_ndim(1, ndim=(0, 2))
 
     """
-    ndim_ = np.atleast_1d(ndim)
-
+    ndim_ = np.atleast_1d(_cast_to_numpy(ndim))
     array_ndim = _cast_to_numpy(array).ndim
     if array_ndim not in ndim_:
         check_ndim(ndim, [0, 1], name='ndim')
-
-        if len(ndim_) == 1:
-            check_integer(ndim_[0], strict=True, name='ndim')
-            expected = f'{ndim}'
-        else:
-            check_integer(ndim, strict=True, name='ndim')
-            expected = f'one of {ndim}'
+        check_integer(ndim_, strict=True, name='ndim')
+        expected = f'{ndim}' if len(ndim_) == 1 else f'one of {ndim}'
         msg = (
             f'{name} has the incorrect number of dimensions. '
             f'Got {array_ndim}, expected {expected}.'
@@ -716,7 +689,7 @@ def check_ndim(
         raise ValueError(msg)
 
 
-def check_number(num: float, /, *, name: str = 'Object') -> None:
+def check_number(num: float | _Scalar, /, *, name: str = 'Object') -> None:
     """Check if an object is an instance of ``Number``.
 
     A number is any instance of ``numbers.Number``, for example,  ``int``,
@@ -788,7 +761,7 @@ def check_string(obj: str, /, *, allow_subclass: bool = True, name: str = 'Objec
     check_instance(obj, str, allow_subclass=allow_subclass, name=name)
 
 
-def check_sequence(obj: Sequence[Any], /, *, name: str = 'Object') -> None:
+def check_sequence(obj: Sequence[object], /, *, name: str = 'Object') -> None:
     """Check if an object is an instance of ``Sequence``.
 
     Parameters
@@ -822,7 +795,7 @@ def check_sequence(obj: Sequence[Any], /, *, name: str = 'Object') -> None:
     check_instance(obj, Sequence, allow_subclass=True, name=name)
 
 
-def check_iterable(obj: Iterable[Any], /, *, name: str = 'Object') -> None:
+def check_iterable(obj: Iterable[object], /, *, name: str = 'Object') -> None:
     """Check if an object is an instance of ``Iterable``.
 
     Parameters
@@ -860,7 +833,7 @@ def check_iterable(obj: Iterable[Any], /, *, name: str = 'Object') -> None:
 def check_instance(
     obj: object,
     /,
-    classinfo: type | tuple[type, ...],
+    classinfo: _ClassInfo,
     *,
     allow_subclass: bool = True,
     name: str = 'Object',
@@ -911,19 +884,10 @@ def check_instance(
     if not isinstance(name, str):
         msg = f'Name must be a string, got {type(name)} instead.'  # type: ignore[unreachable]
         raise TypeError(msg)
-
-    # Get class info from generics
-    origin = get_origin(classinfo)
-    if origin is Union or origin is UnionType:
-        classinfo = get_args(classinfo)
-
-    # Count num classes
+    if isinstance(classinfo, UnionType) or get_origin(classinfo) is Union:
+        classinfo = _union_members(classinfo)
     num_classes = len(classinfo) if isinstance(classinfo, tuple) else 1
-
-    # Check if is instance
     is_instance = isinstance(obj, classinfo)
-
-    # Set flag to raise error if not instance
     is_error = False
     if allow_subclass and not is_instance:
         is_error = True
@@ -941,15 +905,12 @@ def check_instance(
         elif type(obj) is not classinfo:
             is_error = True
             msg_body = 'must have type'
-
     if is_error:
         msg = f'{name} {msg_body} {classinfo}. Got {type(obj)} instead.'
         raise TypeError(msg)
 
 
-def check_type(
-    obj: object, /, classinfo: type | tuple[type, ...], *, name: str = 'Object'
-) -> None:
+def check_type(obj: object, /, classinfo: _ClassInfo, *, name: str = 'Object') -> None:
     """Check if an object is one of the given type or types.
 
     Notes
@@ -990,9 +951,9 @@ def check_type(
 
 
 def check_iterable_items(
-    iterable_obj: Iterable[Any],
+    iterable_obj: Iterable[object],
     /,
-    item_type: type | tuple[type, ...],
+    item_type: _ClassInfo,
     *,
     allow_subclass: bool = True,
     name: str = 'Iterable',
@@ -1041,19 +1002,12 @@ def check_iterable_items(
 
     """
     check_iterable(iterable_obj, name=name)
-    any(
-        check_instance(  # type: ignore[func-returns-value]
-            item,
-            item_type,
-            allow_subclass=allow_subclass,
-            name=f'All items of {name}',
-        )
-        for item in iterable_obj
-    )
+    for item in iterable_obj:
+        check_instance(item, item_type, allow_subclass=allow_subclass, name=f'All items of {name}')
 
 
 def check_contains(
-    container: Container[Any], /, must_contain: Any, *, name: str = 'Input'
+    container: Container[object], /, must_contain: object, *, name: str = 'Input'
 ) -> None:
     """Check if an item is in a container.
 
@@ -1093,9 +1047,9 @@ def check_contains(
 
 
 def check_length(
-    sized_input: float | Sized,
+    sized_input: float | _Scalar | Sized,
     /,
-    exact_length: int | VectorLike[int] | None = None,
+    exact_length: int | VectorLike | None = None,
     *,
     min_length: int | None = None,
     max_length: int | None = None,
@@ -1117,7 +1071,7 @@ def check_length(
     sized_input : float | Sized
         Number or array to check.
 
-    exact_length : int | VectorLike[int], optional
+    exact_length : int | VectorLike, optional
         Check if the array has the given length. If multiple
         numbers are given, the array's length must match one of the
         numbers.
@@ -1168,32 +1122,29 @@ def check_length(
     """
     if allow_scalar:
         # Reshape to 1D
-        if isinstance(sized_input, np.ndarray) and sized_input.ndim == 0:
-            sized_input = [sized_input.tolist()]
-        elif isinstance(sized_input, (float, int)):
+        if isinstance(sized_input, (float, int)):
             sized_input = [sized_input]
-
+        elif isinstance(sized_input, np.ndarray):
+            array = cast('npt.NDArray[_Scalar]', sized_input)
+            if array.ndim == 0:
+                sized_input = array.reshape(1)
     if must_be_1d:
-        check_shape(sized_input, shape=(-1))  # type: ignore[arg-type]
-
-    array_len = len(sized_input)  # type: ignore[arg-type]
+        check_shape(cast('_ArrayLikeOrScalar', sized_input), shape=(-1))
+    array_len = len(cast('Sized', sized_input))
     if exact_length is not None:
         check_integer(exact_length, name="'exact_length'")
-        if array_len not in np.atleast_1d(exact_length):
+        if array_len not in np.atleast_1d(_cast_to_numpy(exact_length)):
             msg = (
                 f'{name} must have a length equal to any of: {exact_length}. '
                 f'Got length {array_len} instead.'
             )
             raise ValueError(msg)
-
-    # Validate min/max length
     if min_length is not None:
         check_finite(min_length, name='Min length')
     if max_length is not None:
         check_finite(max_length, name='Max length')
     if min_length is not None and max_length is not None:
         check_sorted((min_length, max_length), name='Range')
-
     if min_length is not None and array_len < min_length:
         msg = f'{name} must have a minimum length of {min_length}. Got length {array_len} instead.'
         raise ValueError(msg)
@@ -1202,20 +1153,18 @@ def check_length(
         raise ValueError(msg)
 
 
-def _validate_shape_value(shape: _ShapeLike) -> _Shape:
+def _validate_shape_value(shape: _ShapeLike | None) -> _Shape:
     """Validate shape-like input and return its tuple representation."""
     if shape is None:
         # `None` is used to mean `any shape is allowed` by the array
         #  validation methods, so raise an error here.
         #  Also, setting `None` as a shape is deprecated by NumPy.
-        msg = '`None` is not a valid shape. Use `()` instead.'  # type: ignore[unreachable]
+        msg = '`None` is not a valid shape. Use `()` instead.'
         raise TypeError(msg)
-
-    # Return early for common inputs
     if shape in [(), (-1,), (1,), (3,), (2,), (1, 3), (-1, 3)]:
         return shape
 
-    def _is_valid_dim(d: Any) -> bool:
+    def _is_valid_dim(d: object) -> bool:
         return isinstance(d, int) and d >= -1
 
     if _is_valid_dim(shape):
@@ -1233,3 +1182,26 @@ def _validate_shape_value(shape: _ShapeLike) -> _Shape:
     check_greater_than(shape, -1, name='Shape', strict=False)
     msg = 'This line should not be reachable.'  # pragma: no cover
     raise RuntimeError(msg)  # pragma: no cover
+
+
+def _union_members(classinfo: _ClassInfo, /) -> tuple[type[object], ...]:
+    """Return the classes of a union type, which ``typing`` reports as ``Any``."""
+    return cast('tuple[type[object], ...]', get_args(classinfo))
+
+
+def _dtype_of(obj: _DTypeLike | _ArrayLikeOrScalar, /) -> np.dtype[np.generic[object]]:
+    """Return the dtype of a dtype-like object, or of the array an array-like casts to."""
+    try:
+        return np.dtype(cast('_DTypeLike', obj))
+    except TypeError:
+        return np.asanyarray(obj).dtype
+
+
+def _issubdtype(dtype: np.dtype[np.generic[object]], base: _DTypeLike, /) -> bool:
+    """Wrap ``np.issubdtype``, whose parameters are typed as ``Any``."""
+    return np.issubdtype(dtype, base)
+
+
+def _shape_of(array: _ArrayLikeOrScalar, /) -> tuple[int, ...]:
+    """Return the shape the input would have as an array, without copying it."""
+    return np.shape(cast('npt.ArrayLike', array))
