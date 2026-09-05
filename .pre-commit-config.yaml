@@ -30,6 +30,13 @@ repos:
   - id: pretty-format-yaml
     args: [--autofix, --indent, '2']
 
+- repo: https://github.com/sphinx-contrib/sphinx-lint
+  rev: v1.0.2
+  hooks:
+  - id: sphinx-lint
+      # Same line length as the Python sources.
+    args: [--enable, line-too-long, --max-line-length, '99']
+
 - repo: https://github.com/ComPWA/taplo-pre-commit
   rev: v0.9.3
   hooks:
