@@ -32,7 +32,7 @@ pip install pyvista-validation[all]    # both
 Neither is imported unless you actually pass one of their objects in.
 
 The wheels carry a C extension that runs the checks; the package works the same without it,
-from the source distribution or with `PYVISTA_VALIDATION_ACCELERATE=0` in the environment.
+from the source distribution or with `PYVISTA_VALIDATION_ACCELERATE=false` in the environment.
 
 ## Two families of function
 

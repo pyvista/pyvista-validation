@@ -1,6 +1,7 @@
 """Bind the public functions to their C fast paths when the extension is available.
 
-Set ``PYVISTA_VALIDATION_ACCELERATE=0`` to stay on the pure Python implementations.
+Set ``PYVISTA_VALIDATION_ACCELERATE`` to ``0``, ``false``, ``off`` or ``no``, in any
+case, to stay on the pure Python implementations.
 """
 
 from __future__ import annotations
@@ -16,7 +17,13 @@ if TYPE_CHECKING:
 
 _wrap: Callable[[Any, str, str, str], Any] | None = None
 
-if os.environ.get('PYVISTA_VALIDATION_ACCELERATE', '1') != '0':
+
+def disabled(value: str | None, /) -> bool:
+    """Return whether an environment value asks for the pure Python implementations."""
+    return value is not None and value.strip().lower() in {'0', 'false', 'off', 'no'}
+
+
+if not disabled(os.environ.get('PYVISTA_VALIDATION_ACCELERATE')):
     try:
         from pyvista_validation._fast import wrap as _wrap
     except ImportError:  # pragma: no cover - the extension is optional

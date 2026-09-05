@@ -1475,6 +1475,21 @@ def test_check_iterable_items_accepts_an_empty_iterable():
     check_iterable_items([], int)
 
 
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [
+        (None, False), ('', False), ('1', False), ('true', False), ('yes', False), ('on', False),
+        ('0', True), ('false', True), ('off', True), ('no', True), ('FALSE', True), ('Off', True),
+        (' no ', True),
+    ],
+    ids=repr,
+)  # fmt: skip
+def test_accelerate_reads_the_environment_value(value, expected):
+    from pyvista_validation._accelerate import disabled
+
+    assert disabled(value) is expected
+
+
 @pytest.mark.parametrize('scalar_type', [float, int, bool])
 def test_typing_aliases_are_subscriptable(scalar_type):
     from pyvista_validation import _typing
