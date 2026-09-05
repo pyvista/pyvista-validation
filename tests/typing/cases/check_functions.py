@@ -1,6 +1,10 @@
-"""Typing cases for the check functions."""
+"""Typing cases for the check functions, which return their input typed as what they checked."""
 
 from __future__ import annotations
+
+from collections.abc import Iterable
+from collections.abc import Sequence
+import numbers
 
 import numpy as np
 import numpy.typing as npt
@@ -35,56 +39,94 @@ from pyvista_validation.check import _union_members
 from pyvista_validation.check import _validate_real_value
 from pyvista_validation.check import _validate_shape_value
 
-assert_types(check_subdtype(np.zeros(2), np.floating), None)
-assert_types(check_subdtype(float, (np.floating, np.integer)), None)
-assert_types(check_subdtype('f8', [np.floating]), None)
-assert_types(check_subdtype([1, 2], np.integer), None)
-assert_types(check_real([1.0]), None)
-assert_types(check_real(np.zeros(2)), None)
-assert_types(check_real(1), None)
-assert_types(check_sorted([1, 2]), None)
-assert_types(check_sorted(np.array([[0, 1], [2, 3]]), axis=None), None)
-assert_types(check_sorted(np.array([[0, 1], [2, 3]]), axis=0), None)
-assert_types(check_sorted([2, 1], ascending=False, strict=True), None)
-assert_types(check_finite(1.0), None)
-assert_types(check_finite(np.array([1.0, 2.0])), None)
-assert_types(check_integer([1.0, 2.0]), None)
-assert_types(check_integer(np.array([1]), strict=True), None)
-assert_types(check_nonnegative([0, 1]), None)
-assert_types(check_greater_than([1, 2], 0), None)
-assert_types(check_greater_than([1, 2], np.float32(0.5)), None)
-assert_types(check_greater_than([1, 2], 1, strict=False), None)
-assert_types(check_less_than([1, 2], 3), None)
-assert_types(check_less_than([1, 2], np.int8(2), strict=False), None)
-assert_types(check_range([1], [0, 2]), None)
-assert_types(check_range(np.array([1.0]), np.array([0.0, 2.0]), strict_lower=True), None)
-assert_types(check_shape([1, 2], 2), None)
-assert_types(check_shape([1, 2], [(2,), (3,)]), None)
-assert_types(check_shape(1, ()), None)
-assert_types(check_ndim([1], 1), None)
-assert_types(check_ndim([[1]], [1, 2]), None)
-assert_types(check_ndim(np.zeros((2, 2)), range(3)), None)
-assert_types(check_number(1), None)
-assert_types(check_number(1.5), None)
-assert_types(check_number(np.int32(1)), None)
-assert_types(check_string('a'), None)
-assert_types(check_sequence([1]), None)
-assert_types(check_iterable((1,)), None)
-assert_types(check_instance(1, int), None)
-assert_types(check_instance(1, (int, float)), None)
-assert_types(check_instance(1, int | float), None)
-assert_types(check_type(1, int), None)
-assert_types(check_type(1, (int, float)), None)
-assert_types(check_type(1, int | float), None)
-assert_types(check_iterable_items([1, 2], int), None)
-assert_types(check_iterable_items((1, 2.0), (int, float), allow_subclass=False), None)
-assert_types(check_contains([1, 2], must_contain=1), None)
-assert_types(check_contains('abc', must_contain='b'), None)
-assert_types(check_length([1, 2], exact_length=2), None)
-assert_types(check_length([1, 2], exact_length=[1, 2], min_length=1, max_length=2), None)
-assert_types(check_length((1, 2), must_be_1d=True), None)
-assert_types(check_length(1.0, allow_scalar=True), None)
-assert_types(check_length(np.array(1.0), allow_scalar=True), None)
+# Declared rather than inferred, so a case reads the array type it names.
+ONES: npt.NDArray[np.float64] = np.ones(2)
+INTS: npt.NDArray[np.int64] = np.ones(2, dtype=np.int64)
+MATRIX: npt.NDArray[np.int64] = np.array([[0, 1], [2, 3]])
+SCALAR: npt.NDArray[np.float64] = np.array(1.0)
+
+
+def unknown() -> object:
+    """Return a list typed as nothing more than an object, for the checks that narrow it."""
+    return [1, 2]
+
+
+def unknown_str() -> object:
+    """Return a string typed as an object."""
+    return 'a'
+
+
+def unknown_number() -> object:
+    """Return a number typed as an object."""
+    return 1
+
+
+# The input comes back with its own type.
+assert_types(check_subdtype(ONES, np.floating), npt.NDArray[np.float64])
+assert_types(check_subdtype(float, (np.floating, np.integer)), type[float])
+assert_types(check_subdtype('f8', [np.floating]), str)
+assert_types(check_subdtype([1, 2], np.integer), list[int])
+assert_types(check_real([1.0]), list[float])
+assert_types(check_real(ONES), npt.NDArray[np.float64])
+assert_types(check_real(1), int)
+assert_types(check_sorted([1, 2]), list[int])
+assert_types(check_sorted(MATRIX, axis=None), npt.NDArray[np.int64])
+assert_types(check_sorted(MATRIX, axis=0), npt.NDArray[np.int64])
+assert_types(check_sorted([2, 1], ascending=False, strict=True), list[int])
+assert_types(check_finite(1.0), float)
+assert_types(check_finite(ONES), npt.NDArray[np.float64])
+assert_types(check_integer([1.0, 2.0]), list[float])
+assert_types(check_integer(INTS, strict=True), npt.NDArray[np.int64])
+assert_types(check_nonnegative([0, 1]), list[int])
+assert_types(check_greater_than([1, 2], 0), list[int])
+assert_types(check_greater_than([1, 2], np.float32(0.5)), list[int])
+assert_types(check_greater_than([1, 2], 1, strict=False), list[int])
+assert_types(check_less_than([1, 2], 3), list[int])
+assert_types(check_less_than([1, 2], np.int8(2), strict=False), list[int])
+assert_types(check_range([1], [0, 2]), list[int])
+assert_types(check_range(ONES, np.array([0.0, 2.0]), strict_lower=True), npt.NDArray[np.float64])
+assert_types(check_shape([1, 2], 2), list[int])
+assert_types(check_shape([1, 2], [(2,), (3,)]), list[int])
+assert_types(check_shape(1, ()), int)
+assert_types(check_ndim([1], 1), list[int])
+assert_types(check_ndim([[1]], [1, 2]), list[list[int]])
+assert_types(check_ndim(MATRIX, range(3)), npt.NDArray[np.int64])
+assert_types(check_number(1), int)
+assert_types(check_number(1.5), float)
+assert_types(check_number(np.int32(1)), np.int32)
+assert_types(check_string('a'), str)
+assert_types(check_sequence([1]), list[int])
+assert_types(check_iterable((1,)), tuple[int])
+assert_types(check_instance(1, int), int)
+assert_types(check_instance(1, (int, float)), int | float)
+assert_types(check_instance(1, int | float), int)
+assert_types(check_type(1, int), int)
+assert_types(check_type(1, (int, float)), int | float)
+assert_types(check_type(1, int | float), int)
+assert_types(check_iterable_items([1, 2], int), list[int])
+assert_types(check_iterable_items((1, 2.0), (int, float), allow_subclass=False), tuple[int, float])
+assert_types(check_contains([1, 2], must_contain=1), int)
+assert_types(check_contains('abc', must_contain='b'), str)
+assert_types(check_length([1, 2], exact_length=2), list[int])
+assert_types(check_length([1, 2], exact_length=[1, 2], min_length=1, max_length=2), list[int])
+assert_types(check_length((1, 2), must_be_1d=True), tuple[int, int])
+assert_types(check_length(1.0, allow_scalar=True), float)
+assert_types(check_length(SCALAR, allow_scalar=True), npt.NDArray[np.float64])
+
+# An input of unknown type comes back narrowed to what the check established.
+assert_types(check_number(unknown_number()), numbers.Number)
+assert_types(check_string(unknown_str()), str)
+assert_types(check_sequence(unknown()), Sequence[object])
+assert_types(check_iterable(unknown()), Iterable[object])
+assert_types(check_instance(unknown_str(), str), str)
+assert_types(check_instance(unknown_number(), (int, float)), int | float)
+assert_types(check_instance(unknown_number(), (int, float, str)), int | float | str)
+assert_types(check_instance(unknown(), int | list), object)
+assert_types(check_type(unknown_number(), int), int)
+assert_types(check_iterable_items(unknown(), int), Iterable[int])
+assert_types(check_iterable_items(unknown(), (int, float)), Iterable[object])
+
+# Helpers.
 assert_types(_validate_real_value(1.0), npt.NDArray[_Scalar])
 assert_types(_validate_real_value(np.int32(1)), npt.NDArray[_Scalar])
 assert_types(_validate_shape_value((1, 2)), _Shape)
