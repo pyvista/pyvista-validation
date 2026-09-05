@@ -37,11 +37,19 @@ _Integer = np.int64 | np.int32 | np.int16 | np.int8 | np.uint64 | np.uint32 | np
 
 # Anything np.dtype() accepts for numeric data: a scalar type, a dtype, or a dtype name.
 if TYPE_CHECKING:
+    from typing_extensions import Never
+
+    # Empty list literals, which NumPy turns into float64 arrays; only a type checker
+    # can tell them apart from other lists, so the runtime value is a placeholder.
+    _EmptyList: TypeAlias = (
+        list[Never] | list[list[Never]] | list[list[list[Never]]] | list[list[list[list[Never]]]]
+    )
     _DTypeLike: TypeAlias = (
         type[np.generic[object] | float | int | bool] | np.dtype[np.generic[object]] | str
     )
 else:
     _DTypeLike = npt.DTypeLike
+    _EmptyList = list
 
 # For overload signatures that return the same dtype they are given.
 _ScalarT = TypeVar('_ScalarT', bound=_Scalar)

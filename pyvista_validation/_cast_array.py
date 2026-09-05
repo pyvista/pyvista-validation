@@ -13,12 +13,12 @@ if TYPE_CHECKING:
 
     from pyvista_validation._typing import _ArrayLikeOrScalar
     from pyvista_validation._typing import _DTypeLike
+    from pyvista_validation._typing import _EmptyList
     from pyvista_validation._typing import _Floating
     from pyvista_validation._typing import _Integer
     from pyvista_validation._typing import _NestedBool
     from pyvista_validation._typing import _NestedFloat
     from pyvista_validation._typing import _NestedInt
-    from pyvista_validation._typing import _NestedListFloat
     from pyvista_validation._typing import _Scalar
     from pyvista_validation._typing import _ScalarT
     from pyvista_validation._typing import _ToList
@@ -32,14 +32,14 @@ if TYPE_CHECKING:
 
 
 # Overloads follow NumPy's dtype inference: NumPy inputs keep their dtype, Python bools, ints
-# and floats become bool, int64 and float64. Invariant list overloads come first so that an
-# empty list is typed as float64 rather than matching the bool sequence overload. Since bool
-# subclasses int and np.float64 subclasses float, mypy flags those pairs as overlapping; NumPy
-# tells them apart at runtime, so the overlap is ignored where it is reported.
+# and floats become bool, int64 and float64. Empty lists come first so that they are typed
+# as float64 rather than matching the bool sequence overload. Since bool subclasses int and
+# np.float64 subclasses float, mypy flags those pairs as overlapping; NumPy tells them apart
+# at runtime, so the overlap is ignored where it is reported.
 
 
 @overload
-def _cast_to_list(arr: _NestedListFloat, /) -> _ToListFloat: ...
+def _cast_to_list(arr: _EmptyList, /) -> _ToListFloat: ...  # type: ignore[overload-overlap]
 @overload
 def _cast_to_list(
     arr: npt.NDArray[np.bool_] | np.bool_ | bool | _NestedBool, /
@@ -70,7 +70,7 @@ def _cast_to_list(arr: _ArrayLikeOrScalar, /) -> _ToList:
 
 
 @overload
-def _cast_to_tuple(arr: _NestedListFloat, /) -> _ToTupleFloat: ...
+def _cast_to_tuple(arr: _EmptyList, /) -> _ToTupleFloat: ...  # type: ignore[overload-overlap]
 @overload
 def _cast_to_tuple(
     arr: npt.NDArray[np.bool_] | np.bool_ | bool | _NestedBool, /
@@ -111,8 +111,8 @@ def _cast_to_numpy(  # type: ignore[overload-overlap]
     must_be_real: bool = ...,
 ) -> npt.NDArray[_ScalarT]: ...
 @overload
-def _cast_to_numpy(
-    arr: _NestedListFloat,
+def _cast_to_numpy(  # type: ignore[overload-overlap]
+    arr: _EmptyList,
     /,
     *,
     as_any: bool = ...,
