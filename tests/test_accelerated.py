@@ -256,10 +256,10 @@ def validate_array_kwargs(rng, array):
 
 @pytest.mark.parametrize('array', ARRAYS.values(), ids=ARRAYS)
 def test_copy_returns_or_reuses_the_same_object(array, pure):
-    """Whether copy=True hands back the input is part of the behaviour, and `equal` cannot see it."""
+    """Whether copy=True hands back the input, which the value comparison cannot see."""
     for copy in (True, False):
-        fast = pyvista_validation.validate_array(array, copy=copy)
-        slow = pure.validate_array(array, copy=copy)
+        fast = pyvista_validation.validate_array(array, copy=copy, must_be_real=False)
+        slow = pure.validate_array(array, copy=copy, must_be_real=False)
         assert (fast is array) == (slow is array)
         assert np.shares_memory(fast, array) == np.shares_memory(slow, array)
 
