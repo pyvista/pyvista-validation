@@ -104,7 +104,8 @@ jobs:
     - run: uv sync --group dev --python ${{ matrix.python-version }}
     - run: uv run python -c "import pyvista_validation, sys; assert not [m for m in sys.modules if m.startswith(('vtkmodules', 'scipy'))]"
     - run: uv run pytest tests/ --ignore=tests/typing --no-cov
-    - run: uv run pytest tests/ --ignore=tests/typing --no-cov
+    - name: Test the pure Python implementations too
+      run: uv run pytest tests/ --ignore=tests/typing --no-cov
       env:
         PYVISTA_VALIDATION_ACCELERATE: 'false'
 
@@ -199,6 +200,21 @@ jobs:
         persist-credentials: false
         fetch-depth: 0
     - uses: pypa/cibuildwheel@e090b81e30c4d855ea63bf4b6e59204c09a101ae   # v4.2.1
+    - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d   # v10.0.1
+      if: runner.os == 'Linux'
+      with:
+        enable-cache: false
+    - name: Run the suite against the wheel on the newest Python
+        # cibuildwheel builds and tests the wheel on 3.10; the point of the stable ABI is that
+        # the same file serves every later version, which nothing else here exercises. It runs
+        # outside the checkout, whose source tree would otherwise shadow the installed wheel.
+      if: runner.os == 'Linux'
+      working-directory: ${{ runner.temp }}
+      run: |
+        uv venv --python 3.14 abi3
+        uv pip install --python abi3/bin/python pytest pytest-cov "$GITHUB_WORKSPACE"/wheelhouse/*manylinux*.whl
+        abi3/bin/python -c "from pyvista_validation import _accelerate; assert _accelerate.enabled"
+        abi3/bin/python -m pytest "$GITHUB_WORKSPACE/tests" --ignore="$GITHUB_WORKSPACE/tests/typing" --no-cov -q
     - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a   # v7.0.1
       with:
         name: dist-${{ matrix.os }}
