@@ -1356,7 +1356,7 @@ def check_length(
     sized: float | _Scalar | Sized = sized_input
     if allow_scalar:
         # Reshape to 1D
-        if isinstance(sized, (float, int)):
+        if isinstance(sized, (float, int, np.number, np.bool_)):
             sized = [sized]
         elif isinstance(sized, np.ndarray):
             array = cast('npt.NDArray[_Scalar]', sized)

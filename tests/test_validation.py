@@ -1532,9 +1532,6 @@ def test_scalar_check_functions_return_their_input():
 # Behaviour the API documents that the tests above do not pin down. Where the implementation
 # falls short of its documentation, the test is a strict xfail that says how.
 
-XFAIL_NUMPY_SCALAR_LENGTH = pytest.mark.xfail(
-    strict=True, reason='allow_scalar handles Python numbers and 0-D arrays, not NumPy scalars'
-)
 XFAIL_VTK_RESOLVED_FOR_ARRAYS = pytest.mark.xfail(
     strict=True, reason='validate_transform3x3 resolves vtkMatrix3x3 before trying the array'
 )
@@ -2269,7 +2266,9 @@ def test_check_contains_qualifier_depends_on_the_container():
         check_contains({1, 2}, must_contain=3)
 
 
-@pytest.mark.parametrize('scalar', [1, 1.5, np.float64(1), np.array(5)])
+@pytest.mark.parametrize(
+    'scalar', [1, 1.5, np.float64(1), np.int64(1), np.float32(1.0), np.True_, np.array(5)]
+)
 def test_check_length_allow_scalar_counts_a_scalar_as_length_one(scalar):
     check_length(scalar, allow_scalar=True, exact_length=1)
     with pytest.raises(ValueError, match='must have a length equal to any of: 2'):
@@ -2279,12 +2278,6 @@ def test_check_length_allow_scalar_counts_a_scalar_as_length_one(scalar):
 def test_check_length_rejects_a_scalar_without_allow_scalar():
     with pytest.raises(TypeError, match='has no len'):
         check_length(1)
-
-
-@XFAIL_NUMPY_SCALAR_LENGTH
-@pytest.mark.parametrize('scalar', [np.int64(1), np.float32(1.0)])
-def test_check_length_allow_scalar_accepts_numpy_scalars(scalar):
-    check_length(scalar, allow_scalar=True, exact_length=1)
 
 
 def test_check_length_must_be_1d_accepts_any_1d_length():
