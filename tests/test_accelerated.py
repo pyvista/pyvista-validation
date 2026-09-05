@@ -244,3 +244,52 @@ def test_validate_array_agrees(array, pure):
         kwargs = validate_array_kwargs(rng, array)
         for value in inputs:
             assert_same(pyvista_validation.validate_array, pure.validate_array, value, **kwargs)
+
+
+SHAPES = [(), (-1,), (4,), (2, 4), (-1, 4), [(), (4,)], 4, -1, 0, (1.5,), 'x', None, True, [(-2,)]]
+NDIMS = [0, 1, 2, [0, 2], range(3), 1.0, 1.5, [1, 1.5], 'a', -1, np.array([1, 2])]
+BASES = [
+    np.floating, np.integer, np.number, np.generic, float, int, bool, 'float64', 'u1',
+    (np.integer, np.bool_), [np.str_], [], None, 'not a dtype', 5, np.dtype('int8'),
+]  # fmt: skip
+
+
+@pytest.mark.parametrize('array', ARRAYS.values(), ids=ARRAYS)
+def test_structural_checks_agree(array, pure):
+    assert_same(pyvista_validation.check_real, pure.check_real, array)
+    for shape in SHAPES:
+        assert_same(pyvista_validation.check_shape, pure.check_shape, array, shape)
+    for ndim in NDIMS:
+        assert_same(pyvista_validation.check_ndim, pure.check_ndim, array, ndim)
+    for base in BASES:
+        assert_same(pyvista_validation.check_subdtype, pure.check_subdtype, array, base)
+        assert_same(pyvista_validation.check_subdtype, pure.check_subdtype, array.dtype, base)
+
+
+DTYPE_LIKES = ['uint8', np.dtype('f4'), float, int, np.int8, 1.5, [1, 2], 'abc', None, object]
+
+
+@pytest.mark.parametrize('obj', DTYPE_LIKES, ids=repr)
+def test_check_subdtype_agrees_on_dtype_likes(obj, pure):
+    for base in BASES:
+        assert_same(pyvista_validation.check_subdtype, pure.check_subdtype, obj, base)
+
+
+SIZED = [
+    lambda: [1, 2, 3], lambda: (1,), lambda: 'abc', lambda: 5, lambda: 5.0, lambda: True,
+    lambda: np.int64(5), lambda: np.float32(1), lambda: np.array(5), lambda: np.zeros((2, 3)),
+    lambda: np.zeros(0), lambda: {1: 2}, lambda: None, lambda: range(4), lambda: [[1], [2, 3]],
+]  # fmt: skip
+LENGTH_OPTIONS = [
+    {}, {'exact_length': 3}, {'exact_length': [3, 4]}, {'exact_length': 2.5},
+    {'exact_length': range(6)}, {'exact_length': 'a'}, {'min_length': 2}, {'max_length': 2},
+    {'min_length': 1, 'max_length': 3}, {'min_length': 3, 'max_length': 1},
+    {'min_length': np.nan}, {'max_length': -1}, {'min_length': 'a'}, {'must_be_1d': True},
+    {'allow_scalar': True}, {'allow_scalar': True, 'exact_length': 1, 'must_be_1d': True},
+]  # fmt: skip
+
+
+@pytest.mark.parametrize('make', SIZED)
+def test_check_length_agrees(make, pure):
+    for options in LENGTH_OPTIONS:
+        assert_same(pyvista_validation.check_length, pure.check_length, make(), **options)

@@ -155,3 +155,152 @@ static PyObject *fast_check_sorted(PyObject *const *args, Py_ssize_t nargs, PyOb
     }
     return Py_NewRef(a[0]);
 }
+
+/* ---- Structure ------------------------------------------------------------------------- */
+
+static const char *const SUBDTYPE_NAMES[] = {"input_obj", "base_dtype", "name"};
+static params SUBDTYPE_PARAMS = {SUBDTYPE_NAMES, NULL, 3, 2, 1};
+static params REAL_PARAMS = {ARRAY_NAME_NAMES, NULL, 2, 1, 1};
+static const char *const SHAPE_NAMES[] = {"array", "shape", "name"};
+static params SHAPE_PARAMS = {SHAPE_NAMES, NULL, 3, 2, 1};
+static const char *const NDIM_NAMES[] = {"array", "ndim", "name"};
+static params NDIM_PARAMS = {NDIM_NAMES, NULL, 3, 2, 1};
+static const char *const LENGTH_NAMES[] = {
+    "sized_input", "exact_length", "min_length", "max_length", "must_be_1d", "allow_scalar", "name",
+};
+static params LENGTH_PARAMS = {LENGTH_NAMES, NULL, 7, 2, 1};
+
+static PyObject *fast_check_subdtype(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[3];
+    if (bind(&SUBDTYPE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL) {
+        RETURN_FALLBACK;
+    }
+    PyArray_Descr *descr = dtype_of(a[0]);
+    if (descr == NULL) {
+        RETURN_FALLBACK;
+    }
+    int ok = subdtype_ok(descr, a[1]);
+    Py_DECREF(descr);
+    if (ok != 1) {
+        RETURN_FALLBACK;
+    }
+    return Py_NewRef(a[0]);
+}
+
+static PyObject *fast_check_real(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[2];
+    if (bind(&REAL_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL) {
+        RETURN_FALLBACK;
+    }
+    PyObject *array = any_array(a[0]);
+    if (array == FALLBACK) {
+        return array;
+    }
+    int real = is_real_type(PyArray_TYPE((PyArrayObject *)array));
+    Py_DECREF(array);
+    if (!real) {
+        RETURN_FALLBACK;
+    }
+    return Py_NewRef(a[0]);
+}
+
+static PyObject *fast_check_shape(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[3];
+    if (bind(&SHAPE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL) {
+        RETURN_FALLBACK;
+    }
+    PyObject *array = any_array(a[0]);
+    if (array == FALLBACK) {
+        return array;
+    }
+    int ok = shape_ok((PyArrayObject *)array, a[1]);
+    Py_DECREF(array);
+    if (ok != 1) {
+        RETURN_FALLBACK;
+    }
+    return Py_NewRef(a[0]);
+}
+
+static PyObject *fast_check_ndim(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[3];
+    if (bind(&NDIM_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL) {
+        RETURN_FALLBACK;
+    }
+    PyObject *array = any_array(a[0]);
+    if (array == FALLBACK) {
+        return array;
+    }
+    int ok = number_in(PyArray_NDIM((PyArrayObject *)array), a[1], 0);
+    Py_DECREF(array);
+    if (ok != 1) {
+        RETURN_FALLBACK;
+    }
+    return Py_NewRef(a[0]);
+}
+
+static PyObject *fast_check_length(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[7];
+    if (bind(&LENGTH_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL) {
+        RETURN_FALLBACK;
+    }
+    int must_be_1d = truth(a[4], 0), allow_scalar = truth(a[5], 0);
+    if (must_be_1d < 0 || allow_scalar < 0) {
+        PyErr_Clear();
+        RETURN_FALLBACK;
+    }
+    PyObject *sized = a[0];
+    npy_intp length;
+    int ndim;
+    int scalar = PyFloat_Check(sized) || PyLong_Check(sized) || PyArray_IsScalar(sized, Number) ||
+                 PyArray_IsScalar(sized, Bool);
+    if (allow_scalar && scalar) {
+        length = 1;
+        ndim = 1;
+    }
+    else if (PyArray_Check(sized)) {
+        PyArrayObject *array = (PyArrayObject *)sized;
+        if (PyArray_NDIM(array) == 0) {
+            if (!allow_scalar) {
+                RETURN_FALLBACK;
+            }
+            length = 1;
+            ndim = 1;
+        }
+        else {
+            length = PyArray_DIM(array, 0);
+            ndim = PyArray_NDIM(array);
+        }
+    }
+    else {
+        length = PyObject_Size(sized);
+        if (length < 0) {
+            PyErr_Clear();
+            RETURN_FALLBACK;
+        }
+        ndim = 1;
+        if (must_be_1d) {
+            /* np.shape of a sequence is that of the array it becomes */
+            PyObject *array = any_array(sized);
+            if (array == FALLBACK) {
+                return array;
+            }
+            ndim = PyArray_NDIM((PyArrayObject *)array);
+            Py_DECREF(array);
+        }
+    }
+    if (must_be_1d && ndim != 1) {
+        RETURN_FALLBACK;
+    }
+    PyObject *exact = GIVEN(a[1]) ? a[1] : NULL;
+    PyObject *minimum = GIVEN(a[2]) ? a[2] : NULL;
+    PyObject *maximum = GIVEN(a[3]) ? a[3] : NULL;
+    if (length_checks(length, exact, minimum, maximum) != 1) {
+        RETURN_FALLBACK;
+    }
+    return Py_NewRef(a[0]);
+}

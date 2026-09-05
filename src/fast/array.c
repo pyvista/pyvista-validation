@@ -193,10 +193,9 @@ static int number_in(npy_intp value, PyObject *spec, int whole)
     return found;
 }
 
-/* check_length on an array with allow_scalar=True. 1, 0, or -1 to fall back. */
-static int length_ok(PyArrayObject *array, PyObject *exact, PyObject *minimum, PyObject *maximum)
+/* check_length's constraints on a known length. 1, 0, or -1 to fall back. */
+static int length_checks(npy_intp length, PyObject *exact, PyObject *minimum, PyObject *maximum)
 {
-    npy_intp length = PyArray_NDIM(array) == 0 ? 1 : PyArray_DIM(array, 0);
     if (exact != NULL) {
         int found = number_in(length, exact, 1);
         if (found != 1) {
@@ -220,6 +219,38 @@ static int length_ok(PyArrayObject *array, PyObject *exact, PyObject *minimum, P
         return 0;
     }
     return 1;
+}
+
+/* check_length on an array with allow_scalar=True. */
+static int length_ok(PyArrayObject *array, PyObject *exact, PyObject *minimum, PyObject *maximum)
+{
+    npy_intp length = PyArray_NDIM(array) == 0 ? 1 : PyArray_DIM(array, 0);
+    return length_checks(length, exact, minimum, maximum);
+}
+
+/* _dtype_of: the dtype an object names, or the dtype of the array it becomes. A new
+ * reference, or NULL with the error cleared. */
+static PyArray_Descr *dtype_of(PyObject *obj)
+{
+    if (PyArray_Check(obj)) {
+        PyArray_Descr *descr = PyArray_DESCR((PyArrayObject *)obj);
+        Py_INCREF(descr);
+        return descr;
+    }
+    PyArray_Descr *descr = NULL;
+    if (PyArray_DescrConverter(obj, &descr)) {
+        return descr;
+    }
+    PyErr_Clear();
+    PyObject *array = as_array(obj, 1, 0);
+    if (array == FALLBACK) {
+        Py_DECREF(array);
+        return NULL;
+    }
+    descr = PyArray_DESCR((PyArrayObject *)array);
+    Py_INCREF(descr);
+    Py_DECREF(array);
+    return descr;
 }
 
 /* ---- Data types ------------------------------------------------------------------------- */

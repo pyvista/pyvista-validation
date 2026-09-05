@@ -53,8 +53,6 @@ enum {
 };
 static params ARRAY_PARAMS = {ARRAY_NAMES, NULL, A_COUNT, 1, 1};
 
-#define GIVEN(obj) ((obj) != NULL && (obj) != Py_None)
-
 /* validate_array on bound arguments: a new reference, FALLBACK, or NULL. */
 static PyObject *array_core(PyObject *const *a)
 {

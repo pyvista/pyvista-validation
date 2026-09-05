@@ -17,6 +17,9 @@
 #define PY_ARRAY_UNIQUE_SYMBOL pyvista_validation_fast_ARRAY_API
 #include <numpy/arrayobject.h>
 
+/* Whether an optional argument was passed as something other than None. */
+#define GIVEN(obj) ((obj) != NULL && (obj) != Py_None)
+
 /* The sentinel a fast path returns to hand the call to Python. */
 static PyObject *FALLBACK;
 #define RETURN_FALLBACK return Py_NewRef(FALLBACK)
