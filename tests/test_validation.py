@@ -1859,9 +1859,18 @@ def test_validate_arrayN_unsigned_constraints_cannot_be_disabled(kwarg):  # noqa
         validate_arrayN_unsigned([1], **{kwarg: False})
 
 
-@pytest.mark.xfail(strict=True, reason='values beyond int64 wrap around to negative integers')
-def test_validate_arrayN_unsigned_output_is_never_negative():  # noqa: N802
-    assert np.all(validate_arrayN_unsigned([2**63]) >= 0)
+def test_validate_arrayN_unsigned_rejects_values_the_dtype_cannot_hold():  # noqa: N802
+    with pytest.raises(ValueError, match='less than or equal to 9223372036854775807'):
+        validate_arrayN_unsigned([2**63])
+    with pytest.raises(ValueError, match='less than or equal to 255'):
+        validate_arrayN_unsigned([300], dtype_out='uint8')
+    assert validate_arrayN_unsigned([255], dtype_out='uint8').tolist() == [255]
+
+
+def test_validate_arrayN_unsigned_keeps_a_narrower_user_range():  # noqa: N802
+    validate_arrayN_unsigned((1, 2, 3), must_be_in_range=[1, 3])
+    with pytest.raises(ValueError, match='less than or equal to 3'):
+        validate_arrayN_unsigned((1, 2, 4), must_be_in_range=[1, 3])
 
 
 def test_validate_array3_broadcasts_a_single_element_vector():

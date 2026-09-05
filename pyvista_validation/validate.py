@@ -1654,6 +1654,7 @@ def validate_arrayN_unsigned(  # noqa: N802
     * have shape ``(N,)`` or can be reshaped to ``(N,)``
     * are integer-like
     * are non-negative
+    * can be represented by the output data type
 
     The returned array is formatted so that its values:
 
@@ -1727,6 +1728,12 @@ def validate_arrayN_unsigned(  # noqa: N802
 
     _set_default_kwarg_mandatory(cast('dict[str, object]', kwargs), 'must_be_integer', True)
     _set_default_kwarg_mandatory(cast('dict[str, object]', kwargs), 'must_be_nonnegative', True)
+
+    # A value above what the output dtype can hold would otherwise wrap around
+    limit = np.iinfo(np.dtype(cast('_DTypeLike', dtype_out))).max
+    user_range = kwargs.get('must_be_in_range')
+    rng = _cast_to_numpy([0, limit] if user_range is None else user_range)
+    kwargs['must_be_in_range'] = [rng.item(0), min(rng.item(1), limit)]
 
     return cast('_ArrayNUnsignedOut', validate_arrayN(arr, reshape=reshape, **kwargs))
 
