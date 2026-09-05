@@ -788,7 +788,7 @@ def check_number(num: _NumberT, /, *, name: str = ...) -> _NumberT: ...  # type:
 @overload
 def check_number(num: object, /, *, name: str = ...) -> numbers.Number: ...
 # fmt: on
-def check_number(num: object, /, *, name: str = 'Object') -> object:
+def check_number(num: object, /, *, name: str = 'Object') -> numbers.Number:
     """Check if an object is an instance of ``Number``.
 
     A number is any instance of ``numbers.Number``, for example,  ``int``,
@@ -824,8 +824,7 @@ def check_number(num: object, /, *, name: str = 'Object') -> object:
     >>> check_number(1 + 2j)
 
     """
-    check_instance(num, numbers.Number, allow_subclass=True, name=name)
-    return num
+    return check_instance(num, numbers.Number, allow_subclass=True, name=name)
 
 
 # fmt: off
@@ -834,7 +833,7 @@ def check_string(obj: _StrT, /, *, allow_subclass: bool = ..., name: str = ...) 
 @overload
 def check_string(obj: object, /, *, allow_subclass: bool = ..., name: str = ...) -> str: ...
 # fmt: on
-def check_string(obj: object, /, *, allow_subclass: bool = True, name: str = 'Object') -> object:
+def check_string(obj: object, /, *, allow_subclass: bool = True, name: str = 'Object') -> str:
     """Check if an object is an instance of ``str``.
 
     Parameters
@@ -874,8 +873,7 @@ def check_string(obj: object, /, *, allow_subclass: bool = True, name: str = 'Ob
     >>> check_string('eggs')
 
     """
-    check_instance(obj, str, allow_subclass=allow_subclass, name=name)
-    return obj
+    return check_instance(obj, str, allow_subclass=allow_subclass, name=name)
 
 
 # fmt: off
@@ -884,7 +882,7 @@ def check_sequence(obj: _SequenceT, /, *, name: str = ...) -> _SequenceT: ...
 @overload
 def check_sequence(obj: object, /, *, name: str = ...) -> Sequence[object]: ...
 # fmt: on
-def check_sequence(obj: object, /, *, name: str = 'Object') -> object:
+def check_sequence(obj: object, /, *, name: str = 'Object') -> Sequence[object]:
     """Check if an object is an instance of ``Sequence``.
 
     Parameters
@@ -921,7 +919,7 @@ def check_sequence(obj: object, /, *, name: str = 'Object') -> object:
 
     """
     check_instance(obj, Sequence, allow_subclass=True, name=name)
-    return obj
+    return cast('Sequence[object]', obj)
 
 
 # fmt: off
@@ -930,7 +928,7 @@ def check_iterable(obj: _IterableT, /, *, name: str = ...) -> _IterableT: ...
 @overload
 def check_iterable(obj: object, /, *, name: str = ...) -> Iterable[object]: ...
 # fmt: on
-def check_iterable(obj: object, /, *, name: str = 'Object') -> object:
+def check_iterable(obj: object, /, *, name: str = 'Object') -> Iterable[object]:
     """Check if an object is an instance of ``Iterable``.
 
     Parameters
@@ -968,7 +966,7 @@ def check_iterable(obj: object, /, *, name: str = 'Object') -> object:
 
     """
     check_instance(obj, Iterable, allow_subclass=True, name=name)
-    return obj
+    return cast('Iterable[object]', obj)
 
 
 # fmt: off
@@ -1137,7 +1135,7 @@ def check_iterable_items(
     *,
     allow_subclass: bool = True,
     name: str = 'Iterable',
-) -> object:
+) -> Iterable[object]:
     """Check if an iterable's items all have a specified type.
 
     Parameters
@@ -1189,7 +1187,7 @@ def check_iterable_items(
     items = check_iterable(iterable_obj, name=name)
     for item in items:
         check_instance(item, item_type, allow_subclass=allow_subclass, name=f'All items of {name}')
-    return iterable_obj
+    return items
 
 
 def check_contains(
