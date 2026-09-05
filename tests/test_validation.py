@@ -677,9 +677,11 @@ def test_validate_array_as_any_preserves_the_input_type(representation, expected
     assert type(validate_array(array, as_any=True)) is expected_type
 
 
-def test_validate_array_without_as_any_returns_a_base_ndarray():
+def test_validate_array_without_as_any_returns_a_base_ndarray_view():
     array = as_representation([0, 1], 'subclass')
-    assert type(validate_array(array, as_any=False)) is np.ndarray
+    out = validate_array(array, as_any=False)
+    assert type(out) is np.ndarray
+    assert np.shares_memory(out, array)
 
 
 @pytest.mark.parametrize('array', [(True,), 'abc'])
@@ -1209,7 +1211,7 @@ def test_cast_to_numpy(as_any, copy, dtype):
         assert type(array_out) is np.ndarray
 
     if copy:
-        assert array_out is not array_in
+        assert not np.shares_memory(array_out, array_in)
 
     if dtype is None:
         assert array_out.dtype.type is array_in.dtype.type
@@ -1686,20 +1688,9 @@ def test_validate_array_copy_does_not_alias_the_input():
     assert array[0] == 0.0
 
 
-@pytest.mark.xfail(
-    strict=True, reason='copy=True is skipped when as_any=False already returned a new view'
-)
 def test_validate_array_copy_with_as_any_false_does_not_share_memory():
     array = NdarraySubclass([0.0, 1.0])
     assert not np.shares_memory(validate_array(array, as_any=False, copy=True), array)
-
-
-@pytest.mark.xfail(
-    strict=True, reason='as_any=False returns a view of a subclass, not the documented copy'
-)
-def test_validate_array_without_as_any_copies_a_subclass():
-    array = NdarraySubclass([0.0, 1.0])
-    assert not np.shares_memory(validate_array(array, as_any=False), array)
 
 
 def test_validate_array_length_of_a_numpy_scalar():

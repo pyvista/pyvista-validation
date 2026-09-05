@@ -578,17 +578,12 @@ def validate_array(
         ``dtype`` is inferred from the input data.
 
     as_any : bool, default: True
-        Allow subclasses of ``np.ndarray`` to pass through without
-        making a copy.
+        Allow subclasses of ``np.ndarray`` to pass through. Otherwise, a
+        subclass is returned as a base ``np.ndarray`` view of the same data.
 
     copy : bool, default: False
-        If ``True``, a copy of the array is returned. A copy is always
-        returned if the array:
-
-        * is a nested sequence
-        * is a subclass of ``np.ndarray`` and ``as_any`` is ``False``.
-
-        A copy may also be made to satisfy ``dtype_out`` requirements.
+        If ``True``, a copy of the array is returned. A new array is always
+        made from a sequence, and one may also be made to satisfy ``dtype_out``.
 
     to_list : bool, default: False
         Return the validated array as a ``list`` or nested ``list``. Scalar
