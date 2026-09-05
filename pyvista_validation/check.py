@@ -788,7 +788,7 @@ def check_number(num: _NumberT, /, *, name: str = ...) -> _NumberT: ...  # type:
 @overload
 def check_number(num: object, /, *, name: str = ...) -> numbers.Number: ...
 # fmt: on
-def check_number(num: object, /, *, name: str = 'Object') -> numbers.Number:
+def check_number(num: object, /, *, name: str = 'Object') -> object:
     """Check if an object is an instance of ``Number``.
 
     A number is any instance of ``numbers.Number``, for example,  ``int``,
@@ -824,7 +824,8 @@ def check_number(num: object, /, *, name: str = 'Object') -> numbers.Number:
     >>> check_number(1 + 2j)
 
     """
-    return check_instance(num, numbers.Number, allow_subclass=True, name=name)
+    check_instance(num, numbers.Number, allow_subclass=True, name=name)
+    return num
 
 
 # fmt: off
