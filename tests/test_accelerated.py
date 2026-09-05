@@ -2,12 +2,28 @@
 
 from __future__ import annotations
 
+import importlib.util
 import inspect
+import math
+import random
+import sys
+from types import SimpleNamespace
+from unittest import mock
 
+import numpy as np
 import pytest
 
 import pyvista_validation
 from pyvista_validation import _accelerate
+
+
+class NdarraySubclass(np.ndarray):
+    """Minimal ndarray subclass, standing in for PyVista's pyvista_ndarray."""
+
+    def __new__(cls, array):
+        """Create the subclass from any array-like input."""
+        return np.asarray(array).view(cls)
+
 
 ACCELERATED = sorted(
     name
@@ -36,3 +52,195 @@ def test_builtin_presents_like_the_python_function(name):
 def test_every_public_function_is_registered():
     public = {name for name in dir(pyvista_validation) if name.startswith(('check_', 'validate_'))}
     assert set(_accelerate.reference) == public
+
+
+# The fast paths must agree with the Python implementations on every input, including the
+# ones they decline: the same result or the same error.
+
+
+@pytest.fixture(scope='module')
+def pure():
+    """Load the Python implementations so that they call each other, not the C fast paths."""
+
+    def keep(namespace, names):
+        """Leave the module's functions as they are."""
+
+    def load(name, **modules):
+        spec = importlib.util.find_spec(f'pyvista_validation.{name}')
+        module = importlib.util.module_from_spec(spec)
+        no_op = mock.patch.object(_accelerate, 'accelerate', new=keep)
+        with no_op, mock.patch.dict(sys.modules, modules):
+            spec.loader.exec_module(module)
+        return module
+
+    check = load('check')
+    validate = load('validate', **{'pyvista_validation.check': check})
+    names = {**vars(check), **vars(validate)}
+    return SimpleNamespace(**{k: v for k, v in names.items() if not k.startswith('__')})
+
+
+def outcome(function, *args, **kwargs):
+    """Return what a call returns, or which error it raises."""
+    try:
+        return ('returned', function(*args, **kwargs))
+    except Exception as error:  # noqa: BLE001
+        return ('raised', type(error), str(error))
+
+
+def equal(a, b):
+    """Return whether two results are the same value of the same type, NaN included."""
+    if type(a) is not type(b):
+        return False
+    if isinstance(a, np.ndarray):
+        return (
+            a.dtype == b.dtype
+            and a.shape == b.shape
+            and a.flags.writeable == b.flags.writeable
+            and bool(np.array_equal(a, b, equal_nan=a.dtype.kind in 'fc'))
+        )
+    if isinstance(a, (list, tuple)):
+        return len(a) == len(b) and all(equal(x, y) for x, y in zip(a, b, strict=True))
+    if isinstance(a, float) and math.isnan(a):
+        return math.isnan(b)
+    return bool(a == b)
+
+
+def assert_same(fast, slow, *args, **kwargs):
+    """Assert that the accelerated and the pure call agree."""
+    expected = outcome(slow, *args, **kwargs)
+    actual = outcome(fast, *args, **kwargs)
+    if expected[0] == 'raised':
+        assert actual == expected
+    else:
+        assert actual[0] == 'returned', actual
+        assert equal(actual[1], expected[1]), (actual[1], expected[1])
+
+
+def sample_arrays():
+    """Arrays of every dtype in every layout the loops treat differently."""
+    out = {}
+    for dtype in (
+        'bool', 'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64',
+        'float16', 'float32', 'float64', 'longdouble', 'complex128', 'str_',
+    ):  # fmt: skip
+        if dtype == 'bool':
+            values = [True, False, True, True]
+        elif dtype.startswith('uint'):
+            values = [3, 0, 1, 2**63 + 5 if dtype == 'uint64' else 250]
+        elif dtype.startswith('int'):
+            values = [1, -2, 0, 5]
+        elif dtype == 'complex128':
+            values = [1 + 1j, 0, -1, 2]
+        elif dtype == 'str_':
+            values = ['b', 'a', 'c', 'a']
+        else:
+            values = [2.5, -1.5, -0.0, 0.0, 1.0, np.nan, np.inf, -np.inf]
+        base = np.array(values, dtype=dtype)
+        out[f'{dtype}-1d'] = base
+        out[f'{dtype}-1d-step2'] = np.repeat(base, 2)[::2]
+        out[f'{dtype}-1d-reversed'] = base[::-1]
+        out[f'{dtype}-sorted'] = np.sort(base[np.isfinite(base)] if dtype[0] == 'f' else base)
+        two = np.stack([base, base[::-1]])
+        out[f'{dtype}-2d'] = two
+        out[f'{dtype}-2d-T'] = two.T
+        out[f'{dtype}-2d-F'] = np.asfortranarray(two)
+        out[f'{dtype}-3d-slice'] = np.stack([two, two])[:, ::-1, 1:]
+        out[f'{dtype}-0d'] = np.array(values[0], dtype=dtype)
+        out[f'{dtype}-empty'] = base[:0]
+    return out
+
+
+ARRAYS = sample_arrays()
+VALUES = [
+    0,
+    -1,
+    1,
+    0.5,
+    2**63,
+    2**64,
+    np.float32(1),
+    np.int8(-2),
+    np.uint64(2**63),
+    True,
+    [1],
+    'a',
+]
+RANGES = [
+    [0, 1], [1, 0], [-1, 2**63], [0.5, 1.5], [0, np.inf], [np.nan, 1], [1, 2, 3], [True, False],
+    np.array([0, 3], dtype=np.uint64), (-1.5, 4),
+]  # fmt: skip
+
+
+@pytest.mark.parametrize('array', ARRAYS.values(), ids=ARRAYS)
+def test_value_checks_agree(array, pure):
+    assert_same(pyvista_validation.check_finite, pure.check_finite, array)
+    assert_same(pyvista_validation.check_nonnegative, pure.check_nonnegative, array)
+    for strict in (True, False):
+        assert_same(pyvista_validation.check_integer, pure.check_integer, array, strict=strict)
+        for value in VALUES:
+            assert_same(
+                pyvista_validation.check_greater_than, pure.check_greater_than, array, value,
+                strict=strict,
+            )  # fmt: skip
+            assert_same(
+                pyvista_validation.check_less_than, pure.check_less_than, array, value,
+                strict=strict,
+            )  # fmt: skip
+        for rng in RANGES:
+            assert_same(
+                pyvista_validation.check_range, pure.check_range, array, rng,
+                strict_lower=strict, strict_upper=not strict,
+            )  # fmt: skip
+
+
+@pytest.mark.parametrize('array', ARRAYS.values(), ids=ARRAYS)
+@pytest.mark.parametrize('axis', [None, -1, 0, 1, -2, 2, 0.0, 1.5, 'a'])
+def test_sorted_agrees(array, axis, pure):
+    for ascending in (True, False):
+        for strict in (True, False):
+            assert_same(
+                pyvista_validation.check_sorted, pure.check_sorted, array,
+                ascending=ascending, strict=strict, axis=axis,
+            )  # fmt: skip
+
+
+def validate_array_kwargs(rng, array):
+    """Return a random combination of validate_array's options for the array."""
+    shape = array.shape
+    pick = rng.choice
+    kwargs = {
+        'must_have_shape': pick([None, shape, (-1,), (-1, 3), [(), shape], 0]),
+        'must_have_ndim': pick([None, array.ndim, [0, 2], 1.0, 3]),
+        'must_have_dtype': pick([None, np.number, np.floating, [np.integer, np.bool_], 'float64']),
+        'must_have_length': pick([None, len(shape) and shape[0], [1, 2], 2.5, range(5)]),
+        'must_have_min_length': pick([None, 0, 1, 3]),
+        'must_have_max_length': pick([None, 1, 2, 8]),
+        'must_be_nonnegative': bool(pick([False, True])),
+        'must_be_finite': bool(pick([False, True])),
+        'must_be_real': bool(pick([True, True, False])),
+        'must_be_integer': bool(pick([False, True])),
+        'must_be_sorted': pick([False, True, {'ascending': False}, {'strict': True, 'axis': 0}]),
+        'must_be_in_range': pick([None, [0, 1], [-2, 2**63], [1, 0]]),
+        'strict_lower_bound': bool(pick([False, True])),
+        'strict_upper_bound': bool(pick([False, True])),
+        'reshape_to': pick([None, -1, shape, (2, -1)]),
+        'broadcast_to': pick([None, shape, (2, *shape)]),
+        'dtype_out': pick([None, float, int, 'float32', bool, np.uint8]),
+        'as_any': bool(pick([True, False])),
+        'copy': bool(pick([False, True])),
+        'to_list': bool(pick([False, True])),
+        'to_tuple': bool(pick([False, True])),
+    }
+    return {key: value for key, value in kwargs.items() if value is not None}
+
+
+@pytest.mark.parametrize('array', ARRAYS.values(), ids=ARRAYS)
+def test_validate_array_agrees(array, pure):
+    rng = random.Random(array.dtype.name)
+    inputs = [array, NdarraySubclass(array)]
+    if array.ndim <= 2 and array.size:
+        inputs.append(array.tolist())
+    for _ in range(40):
+        kwargs = validate_array_kwargs(rng, array)
+        for value in inputs:
+            assert_same(pyvista_validation.validate_array, pure.validate_array, value, **kwargs)

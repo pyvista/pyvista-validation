@@ -161,6 +161,13 @@ typedef struct {
 } entry;
 
 static const entry TABLE[] = {
+    {"check_finite", fast_check_finite},
+    {"check_nonnegative", fast_check_nonnegative},
+    {"check_integer", fast_check_integer},
+    {"check_greater_than", fast_check_greater_than},
+    {"check_less_than", fast_check_less_than},
+    {"check_range", fast_check_range},
+    {"check_sorted", fast_check_sorted},
     {"validate_array", fast_validate_array},
     {NULL, NULL},
 };
@@ -259,7 +266,10 @@ static PyObject *import_attribute(const char *module, const char *attribute)
     return value;
 }
 
-static params *ALL_PARAMS[] = {&ARRAY_PARAMS};
+static params *ALL_PARAMS[] = {
+    &ARRAY_PARAMS,      &FINITE_PARAMS, &NONNEGATIVE_PARAMS, &INTEGER_PARAMS,
+    &GREATER_PARAMS,    &LESS_PARAMS,   &RANGE_PARAMS,       &SORTED_PARAMS,
+};
 
 PyMODINIT_FUNC PyInit__fast(void)
 {
