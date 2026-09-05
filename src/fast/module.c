@@ -182,6 +182,13 @@ static const entry TABLE[] = {
     {"check_range", fast_check_range},
     {"check_sorted", fast_check_sorted},
     {"validate_array", fast_validate_array},
+    {"validate_number", fast_validate_number},
+    {"validate_data_range", fast_validate_data_range},
+    {"validate_arrayNx3", fast_validate_arrayNx3},
+    {"validate_arrayN", fast_validate_arrayN},
+    {"validate_arrayN_unsigned", fast_validate_arrayN_unsigned},
+    {"validate_array3", fast_validate_array3},
+    {"validate_dimensionality", fast_validate_dimensionality},
     {NULL, NULL},
 };
 
@@ -285,7 +292,7 @@ static params *ALL_PARAMS[] = {
     &SUBDTYPE_PARAMS,   &REAL_PARAMS,   &SHAPE_PARAMS,       &NDIM_PARAMS,
     &LENGTH_PARAMS,     &NUMBER_PARAMS, &STRING_PARAMS,      &SEQUENCE_PARAMS,
     &ITERABLE_PARAMS,   &INSTANCE_PARAMS, &TYPE_PARAMS,      &ITEMS_PARAMS,
-    &CONTAINS_PARAMS,
+    &CONTAINS_PARAMS,   &FAMILY_PARAMS,
 };
 
 PyMODINIT_FUNC PyInit__fast(void)
@@ -303,6 +310,9 @@ PyMODINIT_FUNC PyInit__fast(void)
     cache.np_generic = import_attribute("numpy", "generic");
     if (cache.numbers_Number == NULL || cache.abc_Sequence == NULL || cache.abc_Iterable == NULL ||
         cache.np_broadcast_to == NULL || cache.np_generic == NULL) {
+        return NULL;
+    }
+    if (build_specs() < 0) {
         return NULL;
     }
     for (size_t i = 0; i < sizeof(ALL_PARAMS) / sizeof(ALL_PARAMS[0]); i++) {

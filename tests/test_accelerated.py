@@ -363,3 +363,36 @@ def test_object_checks_agree(make, pure):
 def test_check_contains_agrees(make, pure):
     for item in (1, 3, 'a', 'bc', None, [1]):
         assert_same(pyvista_validation.check_contains, pure.check_contains, make(), item)
+
+
+FAMILIES = [
+    ('validate_number', {'reshape': [True, False]}),
+    ('validate_data_range', {}),
+    ('validate_arrayNx3', {'reshape': [True, False]}),
+    ('validate_arrayN', {'reshape': [True, False]}),
+    ('validate_arrayN_unsigned', {'reshape': [True, False]}),
+    ('validate_array3', {'reshape': [True, False], 'broadcast': [True, False]}),
+    ('validate_dimensionality', {'reshape': [True, False]}),
+]
+FAMILY_INPUTS = [
+    1, 2.0, -1, 2.5, np.int8(2), np.float32(1.5), [2], [1, 2], [1, 2, 3], [[1, 2, 3]],
+    [[1], [2], [3]], [[1, 2, 3], [4, 5, 6]], [0, 1], [1, 0], np.zeros((0, 3)), [], '2D', '4D',
+    '1d', ['1D'], 'x', np.array([1e300]), [2**63], [300], True, [True, False],
+]  # fmt: skip
+
+
+@pytest.mark.parametrize(('name', 'flags'), FAMILIES, ids=[f[0] for f in FAMILIES])
+def test_families_agree(name, flags, pure):
+    rng = random.Random(name)
+    fast, slow = getattr(pyvista_validation, name), getattr(pure, name)
+    for value in FAMILY_INPUTS:
+        assert_same(fast, slow, value)
+        for _ in range(25):
+            array = np.asarray(value) if not isinstance(value, str) else np.zeros(())
+            kwargs = validate_array_kwargs(rng, array)
+            kwargs = {k: v for k, v in kwargs.items() if rng.random() < 0.3}
+            for flag, choices in flags.items():
+                kwargs[flag] = rng.choice(choices)
+            if name == 'validate_arrayN_unsigned' and rng.random() < 0.5:
+                kwargs['dtype_out'] = rng.choice([int, np.uint8, 'int32', float])
+            assert_same(fast, slow, value, **kwargs)
