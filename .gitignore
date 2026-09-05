@@ -13,3 +13,7 @@ typing-coverage/
 __pycache__/
 pyvista_validation/_version.py
 uv.lock
+
+# Built C extension
+*.so
+*.pyd

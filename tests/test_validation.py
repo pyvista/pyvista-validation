@@ -1475,6 +1475,21 @@ def test_check_iterable_items_accepts_an_empty_iterable():
     check_iterable_items([], int)
 
 
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [
+        (None, False), ('', False), ('1', False), ('true', False), ('yes', False), ('on', False),
+        ('0', True), ('false', True), ('off', True), ('no', True), ('FALSE', True), ('Off', True),
+        (' no ', True),
+    ],
+    ids=repr,
+)  # fmt: skip
+def test_accelerate_reads_the_environment_value(value, expected):
+    from pyvista_validation._accelerate import disabled
+
+    assert disabled(value) is expected
+
+
 @pytest.mark.parametrize('scalar_type', [float, int, bool])
 def test_typing_aliases_are_subscriptable(scalar_type):
     from pyvista_validation import _typing
@@ -1856,8 +1871,10 @@ def test_validate_arrayN_unsigned_constraints_cannot_be_disabled(kwarg):  # noqa
 
 
 def test_validate_arrayN_unsigned_rejects_values_the_dtype_cannot_hold():  # noqa: N802
-    with pytest.raises(ValueError, match='less than or equal to 9223372036854775807'):
-        validate_arrayN_unsigned([2**63])
+    # The default output dtype is the platform's int, which is not 64 bits everywhere
+    limit = np.iinfo(np.dtype(int)).max
+    with pytest.raises(ValueError, match=f'less than or equal to {limit}'):
+        validate_arrayN_unsigned([limit + 1])
     with pytest.raises(ValueError, match='less than or equal to 255'):
         validate_arrayN_unsigned([300], dtype_out='uint8')
     assert validate_arrayN_unsigned([255], dtype_out='uint8').tolist() == [255]
@@ -1925,7 +1942,7 @@ def test_validate_axes_normalize_returns_unit_float_vectors():
     axes = validate_axes(np.diag([2, 3, 4]))
     assert axes.dtype == np.float64
     assert np.array_equal(axes, np.eye(3))
-    assert validate_axes(np.eye(3, dtype=int), normalize=False).dtype == np.int64
+    assert validate_axes(np.eye(3, dtype=int), normalize=False).dtype == np.dtype(int)
 
 
 @pytest.mark.parametrize(
@@ -2320,9 +2337,22 @@ def test_lazy_import_placeholder_when_the_vtk_backend_is_missing(
         validate_transform4x4('abc')
 
 
+class ArrayLike:
+    """An object NumPy converts through the array protocol, of no type this package knows."""
+
+    def __array__(self, dtype=None, copy=None):
+        """Return the identity matrix this object stands for."""
+        return np.eye(3)
+
+
+@pytest.mark.parametrize(
+    'make',
+    [lambda: np.eye(3), lambda: np.eye(3).tolist(), ArrayLike, lambda: memoryview(np.eye(3))],
+    ids=['ndarray', 'list', 'array-protocol', 'memoryview'],
+)
 @pytest.mark.parametrize(
     'function', [validate_transform4x4, validate_transform3x3, validate_rotation]
 )
-def test_array_input_does_not_resolve_optional_dependencies(function, unresolved_lazy_names):
-    function(np.eye(3))
+def test_array_input_does_not_resolve_optional_dependencies(function, make, unresolved_lazy_names):
+    function(make())
     assert not any(name in vars(_lazy_import) for name in LAZY_NAMES)

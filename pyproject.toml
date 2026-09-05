@@ -1,6 +1,6 @@
 [build-system]
 build-backend = 'setuptools.build_meta'
-requires = ['setuptools>=64', 'setuptools_scm>=8']
+requires = ['numpy>=2.0', 'setuptools>=64', 'setuptools_scm>=8']
 
 [dependency-groups]
 dev = [
@@ -65,6 +65,13 @@ Homepage = 'https://github.com/pyvista/pyvista-validation'
 [tool.uv.dependency-groups]
 # The pinned Sphinx needs a newer Python than the package itself supports.
 docs = { requires-python = '>=3.11' }
+
+[tool.cibuildwheel]
+# One stable-ABI wheel per platform; the test matrix covers the other Pythons.
+build = 'cp310-*'
+build-verbosity = 1
+test-command = 'python -c "from pyvista_validation import _accelerate; assert _accelerate.enabled" && pytest {project}/tests --ignore={project}/tests/typing --no-cov -q'
+test-requires = ['pytest', 'pytest-cov']
 
 [tool.coverage.run]
 branch = true
@@ -137,6 +144,8 @@ ignore = ['D203', 'D211', 'D213']
 # a TypeVar on Python 3.10.
 'pyvista_validation/_typing/*' = ['UP007']
 'tests/*' = ['D103']
+# The benchmark prints its table.
+'benchmarks/*' = ['T201']
 # Overload stubs are one line each, kept out of the formatter with `fmt: off`.
 'pyvista_validation/_cast_array.py' = ['E501']
 'pyvista_validation/check.py' = ['E501']
