@@ -166,6 +166,14 @@ static const entry TABLE[] = {
     {"check_shape", fast_check_shape},
     {"check_ndim", fast_check_ndim},
     {"check_length", fast_check_length},
+    {"check_number", fast_check_number},
+    {"check_string", fast_check_string},
+    {"check_sequence", fast_check_sequence},
+    {"check_iterable", fast_check_iterable},
+    {"check_instance", fast_check_instance},
+    {"check_type", fast_check_type},
+    {"check_iterable_items", fast_check_iterable_items},
+    {"check_contains", fast_check_contains},
     {"check_finite", fast_check_finite},
     {"check_nonnegative", fast_check_nonnegative},
     {"check_integer", fast_check_integer},
@@ -275,7 +283,9 @@ static params *ALL_PARAMS[] = {
     &ARRAY_PARAMS,      &FINITE_PARAMS, &NONNEGATIVE_PARAMS, &INTEGER_PARAMS,
     &GREATER_PARAMS,    &LESS_PARAMS,   &RANGE_PARAMS,       &SORTED_PARAMS,
     &SUBDTYPE_PARAMS,   &REAL_PARAMS,   &SHAPE_PARAMS,       &NDIM_PARAMS,
-    &LENGTH_PARAMS,
+    &LENGTH_PARAMS,     &NUMBER_PARAMS, &STRING_PARAMS,      &SEQUENCE_PARAMS,
+    &ITERABLE_PARAMS,   &INSTANCE_PARAMS, &TYPE_PARAMS,      &ITEMS_PARAMS,
+    &CONTAINS_PARAMS,
 };
 
 PyMODINIT_FUNC PyInit__fast(void)

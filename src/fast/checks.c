@@ -304,3 +304,223 @@ static PyObject *fast_check_length(PyObject *const *args, Py_ssize_t nargs, PyOb
     }
     return Py_NewRef(a[0]);
 }
+
+/* ---- Objects ---------------------------------------------------------------------------- */
+
+static const char *const NUMBER_NAMES[] = {"num", "name"};
+static params NUMBER_PARAMS = {NUMBER_NAMES, NULL, 2, 1, 1};
+static const char *const STRING_NAMES[] = {"obj", "allow_subclass", "name"};
+static params STRING_PARAMS = {STRING_NAMES, NULL, 3, 1, 1};
+static const char *const OBJECT_NAMES[] = {"obj", "name"};
+static params SEQUENCE_PARAMS = {OBJECT_NAMES, NULL, 2, 1, 1};
+static params ITERABLE_PARAMS = {OBJECT_NAMES, NULL, 2, 1, 1};
+static const char *const INSTANCE_NAMES[] = {"obj", "classinfo", "allow_subclass", "name"};
+static params INSTANCE_PARAMS = {INSTANCE_NAMES, NULL, 4, 2, 1};
+static const char *const TYPE_NAMES[] = {"obj", "classinfo", "name"};
+static params TYPE_PARAMS = {TYPE_NAMES, NULL, 3, 2, 1};
+static const char *const ITEMS_NAMES[] = {"iterable_obj", "item_type", "allow_subclass", "name"};
+static params ITEMS_PARAMS = {ITEMS_NAMES, NULL, 4, 2, 1};
+static const char *const CONTAINS_NAMES[] = {"container", "must_contain", "name"};
+static params CONTAINS_PARAMS = {CONTAINS_NAMES, NULL, 3, 2, 1};
+
+/* check_instance insists on a string name before anything else. */
+static int name_ok(PyObject *name)
+{
+    return name == NULL || PyUnicode_Check(name);
+}
+
+/* isinstance, or the exact type when subclasses are not allowed. 1, 0, or -1 to fall back. */
+static int instance_of(PyObject *obj, PyObject *classinfo, int allow_subclass)
+{
+    int result = PyObject_IsInstance(obj, classinfo);
+    if (result < 0) {
+        PyErr_Clear();
+        return -1;
+    }
+    if (allow_subclass || !result) {
+        return result;
+    }
+    PyObject *type = (PyObject *)Py_TYPE(obj);
+    if (PyType_Check(classinfo)) {
+        return type == classinfo;
+    }
+    /* A tuple, or a union whose members check_instance compares against */
+    PyObject *members = PyTuple_Check(classinfo) ? Py_NewRef(classinfo)
+                                                 : PyObject_GetAttrString(classinfo, "__args__");
+    if (members == NULL || !PyTuple_Check(members)) {
+        PyErr_Clear();
+        Py_XDECREF(members);
+        return -1;
+    }
+    int found = 0;
+    Py_ssize_t n = PyTuple_Size(members);
+    for (Py_ssize_t i = 0; i < n; i++) {
+        found |= PyTuple_GetItem(members, i) == type;
+    }
+    Py_DECREF(members);
+    return found;
+}
+
+static PyObject *fast_check_number(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[2];
+    if (bind(&NUMBER_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || !name_ok(a[1])) {
+        RETURN_FALLBACK;
+    }
+    PyObject *num = a[0];
+    if (!(PyLong_Check(num) || PyFloat_Check(num) || PyComplex_Check(num)) &&
+        instance_of(num, cache.numbers_Number, 1) != 1) {
+        RETURN_FALLBACK;
+    }
+    return Py_NewRef(num);
+}
+
+static PyObject *fast_check_string(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[3];
+    if (bind(&STRING_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || !name_ok(a[2])) {
+        RETURN_FALLBACK;
+    }
+    int allow_subclass = truth(a[1], 1);
+    if (allow_subclass < 0) {
+        PyErr_Clear();
+        RETURN_FALLBACK;
+    }
+    if (!(allow_subclass ? PyUnicode_Check(a[0]) : PyUnicode_CheckExact(a[0]))) {
+        RETURN_FALLBACK;
+    }
+    return Py_NewRef(a[0]);
+}
+
+static PyObject *fast_check_sequence(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[2];
+    if (bind(&SEQUENCE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || !name_ok(a[1])) {
+        RETURN_FALLBACK;
+    }
+    PyObject *obj = a[0];
+    if (!(PyList_Check(obj) || PyTuple_Check(obj) || PyUnicode_Check(obj) || PyBytes_Check(obj) ||
+          PyRange_Check(obj)) &&
+        instance_of(obj, cache.abc_Sequence, 1) != 1) {
+        RETURN_FALLBACK;
+    }
+    return Py_NewRef(obj);
+}
+
+/* The containers whose iteration neither consumes nor changes them. */
+static int reiterable(PyObject *obj)
+{
+    return PyList_Check(obj) || PyTuple_Check(obj) || PyUnicode_Check(obj) || PyBytes_Check(obj) ||
+           PyDict_Check(obj) || PyAnySet_Check(obj) || PyRange_Check(obj) || PyArray_Check(obj);
+}
+
+static PyObject *fast_check_iterable(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[2];
+    if (bind(&ITERABLE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || !name_ok(a[1])) {
+        RETURN_FALLBACK;
+    }
+    if (!reiterable(a[0]) && instance_of(a[0], cache.abc_Iterable, 1) != 1) {
+        RETURN_FALLBACK;
+    }
+    return Py_NewRef(a[0]);
+}
+
+static PyObject *fast_check_instance(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[4];
+    if (bind(&INSTANCE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL ||
+        !name_ok(a[3])) {
+        RETURN_FALLBACK;
+    }
+    int allow_subclass = truth(a[2], 1);
+    if (allow_subclass < 0) {
+        PyErr_Clear();
+        RETURN_FALLBACK;
+    }
+    if (instance_of(a[0], a[1], allow_subclass) != 1) {
+        RETURN_FALLBACK;
+    }
+    return Py_NewRef(a[0]);
+}
+
+static PyObject *fast_check_type(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[3];
+    if (bind(&TYPE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL ||
+        !name_ok(a[2])) {
+        RETURN_FALLBACK;
+    }
+    if (instance_of(a[0], a[1], 0) != 1) {
+        RETURN_FALLBACK;
+    }
+    return Py_NewRef(a[0]);
+}
+
+static PyObject *fast_check_iterable_items(PyObject *const *args, Py_ssize_t nargs,
+                                           PyObject *kwnames)
+{
+    PyObject *a[4];
+    if (bind(&ITEMS_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL ||
+        !name_ok(a[3])) {
+        RETURN_FALLBACK;
+    }
+    int allow_subclass = truth(a[2], 1);
+    if (allow_subclass < 0) {
+        PyErr_Clear();
+        RETURN_FALLBACK;
+    }
+    PyObject *items = a[0];
+    /* An iterator would be consumed here and then again by Python; leave those to it */
+    if (!reiterable(items)) {
+        RETURN_FALLBACK;
+    }
+    int ok = 1;
+    if (PyList_Check(items) || PyTuple_Check(items)) {
+        Py_ssize_t n = PySequence_Size(items);
+        for (Py_ssize_t i = 0; ok && i < n; i++) {
+            PyObject *item = PySequence_GetItem(items, i);
+            if (item == NULL) {
+                PyErr_Clear();
+                RETURN_FALLBACK;
+            }
+            ok = instance_of(item, a[1], allow_subclass) == 1;
+            Py_DECREF(item);
+        }
+    }
+    else {
+        PyObject *iterator = PyObject_GetIter(items);
+        if (iterator == NULL) {
+            PyErr_Clear();
+            RETURN_FALLBACK;
+        }
+        PyObject *item;
+        while (ok && (item = PyIter_Next(iterator)) != NULL) {
+            ok = instance_of(item, a[1], allow_subclass) == 1;
+            Py_DECREF(item);
+        }
+        Py_DECREF(iterator);
+        if (PyErr_Occurred()) {
+            PyErr_Clear();
+            RETURN_FALLBACK;
+        }
+    }
+    if (!ok) {
+        RETURN_FALLBACK;
+    }
+    return Py_NewRef(items);
+}
+
+static PyObject *fast_check_contains(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
+{
+    PyObject *a[3];
+    if (bind(&CONTAINS_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL) {
+        RETURN_FALLBACK;
+    }
+    int found = PySequence_Contains(a[0], a[1]);
+    if (found != 1) {
+        PyErr_Clear();
+        RETURN_FALLBACK;
+    }
+    return Py_NewRef(a[1]);
+}
