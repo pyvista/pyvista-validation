@@ -50,6 +50,7 @@ else:
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import Any
     from typing import TypeAlias
 
     import numpy.typing as npt
@@ -1733,7 +1734,7 @@ def validate_arrayN_unsigned(  # noqa: N802
     _set_default_kwarg_mandatory(cast('dict[str, object]', kwargs), 'must_be_nonnegative', True)
 
     # A value above what the output dtype can hold would otherwise wrap around
-    limit = np.iinfo(np.dtype(cast('_DTypeLike', dtype_out))).max
+    limit = _integer_max(cast('_DTypeLike', dtype_out))
     user_range = kwargs.get('must_be_in_range')
     rng = _cast_to_numpy([0, limit] if user_range is None else user_range)
     kwargs['must_be_in_range'] = [rng.item(0), min(rng.item(1), limit)]
@@ -2006,6 +2007,11 @@ def validate_dimensionality(
     return cast(
         '_DimensionalityOut', validate_array(cast('npt.NDArray[_Scalar]', as_array), **kwargs)
     )
+
+
+def _integer_max(dtype: _DTypeLike, /) -> int:
+    """Return the largest value an integer dtype holds, typing what NumPy leaves as ``Any``."""
+    return int(np.iinfo(cast('type[np.integer[Any]]', dtype)).max)
 
 
 def _asarray_any(obj: object, /) -> npt.NDArray[np.generic[object]]:
