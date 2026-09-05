@@ -803,7 +803,10 @@ def validate_axes(
             if np.isclose(third, 0).all() and not np.isclose(vectors[:2], 0).all(axis=1).any():
                 msg = f'{name} cannot be parallel.'
                 raise ValueError(msg)
-            vectors[2] = third if must_have_orientation == 'right' else -third
+            if must_have_orientation == 'right':
+                vectors[2] = third
+            else:
+                vectors[2] = np.cross(second, first)
         axes_array = vectors
     check_finite(axes_array, name=name)
 
