@@ -10,6 +10,8 @@ involving a type variable as imprecise. Sequence elements are Python scalars;
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
+from typing import TypeAlias
 from typing import TypeVar
 
 import numpy as np
@@ -32,6 +34,14 @@ _Scalar = (
 )
 _Floating = np.float64 | np.float32 | np.float16
 _Integer = np.int64 | np.int32 | np.int16 | np.int8 | np.uint64 | np.uint32 | np.uint16 | np.uint8
+
+# Anything np.dtype() accepts for numeric data: a scalar type, a dtype, or a dtype name.
+if TYPE_CHECKING:
+    _DTypeLike: TypeAlias = (
+        type[np.generic[object] | float | int | bool] | np.dtype[np.generic[object]] | str
+    )
+else:
+    _DTypeLike = npt.DTypeLike
 
 # For overload signatures that return the same dtype they are given.
 _ScalarT = TypeVar('_ScalarT', bound=_Scalar)
@@ -88,18 +98,30 @@ _NestedTupleFloat = (
 _FiniteNestedList = _NestedListFloat
 _FiniteNestedTuple = _NestedTupleFloat
 
-_ArrayLike1D = npt.NDArray[_Scalar] | Sequence[float] | Sequence[npt.NDArray[_Scalar]]
+# What converting an array of each dtype family to lists or tuples produces; 0-D gives a scalar.
+_ToListBool = bool | _NestedListBool
+_ToListInt = int | _NestedListInt
+_ToListFloat = float | _NestedListFloat
+_ToList = _ToListBool | _ToListInt | _ToListFloat
+_ToTupleBool = bool | _NestedTupleBool
+_ToTupleInt = int | _NestedTupleInt
+_ToTupleFloat = float | _NestedTupleFloat
+_ToTuple = _ToTupleBool | _ToTupleInt | _ToTupleFloat
+
+# Sequences may mix Python and NumPy scalars, or hold arrays as their innermost items.
+_Item = float | _Scalar
+_ArrayLike1D = npt.NDArray[_Scalar] | Sequence[_Item] | Sequence[npt.NDArray[_Scalar]]
 _ArrayLike2D = (
-    npt.NDArray[_Scalar] | Sequence[Sequence[float]] | Sequence[Sequence[npt.NDArray[_Scalar]]]
+    npt.NDArray[_Scalar] | Sequence[Sequence[_Item]] | Sequence[Sequence[npt.NDArray[_Scalar]]]
 )
 _ArrayLike3D = (
     npt.NDArray[_Scalar]
-    | Sequence[Sequence[Sequence[float]]]
+    | Sequence[Sequence[Sequence[_Item]]]
     | Sequence[Sequence[Sequence[npt.NDArray[_Scalar]]]]
 )
 _ArrayLike4D = (
     npt.NDArray[_Scalar]
-    | Sequence[Sequence[Sequence[Sequence[float]]]]
+    | Sequence[Sequence[Sequence[Sequence[_Item]]]]
     | Sequence[Sequence[Sequence[Sequence[npt.NDArray[_Scalar]]]]]
 )
 _ArrayLike = _ArrayLike1D | _ArrayLike2D | _ArrayLike3D | _ArrayLike4D

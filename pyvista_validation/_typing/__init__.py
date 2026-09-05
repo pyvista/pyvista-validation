@@ -11,6 +11,7 @@ from ._aliases import _ArrayLikeOrScalar as _ArrayLikeOrScalar
 from ._array_like import Number as Number
 from ._array_like import NumberType as NumberType
 from ._array_like import NumpyArray as NumpyArray
+from ._array_like import _DTypeLike as _DTypeLike
 from ._array_like import _FiniteNestedList as _FiniteNestedList
 from ._array_like import _FiniteNestedTuple as _FiniteNestedTuple
 from ._array_like import _Floating as _Floating
@@ -26,3 +27,11 @@ from ._array_like import _NestedTupleFloat as _NestedTupleFloat
 from ._array_like import _NestedTupleInt as _NestedTupleInt
 from ._array_like import _Scalar as _Scalar
 from ._array_like import _ScalarT as _ScalarT
+from ._array_like import _ToList as _ToList
+from ._array_like import _ToListBool as _ToListBool
+from ._array_like import _ToListFloat as _ToListFloat
+from ._array_like import _ToListInt as _ToListInt
+from ._array_like import _ToTuple as _ToTuple
+from ._array_like import _ToTupleBool as _ToTupleBool
+from ._array_like import _ToTupleFloat as _ToTupleFloat
+from ._array_like import _ToTupleInt as _ToTupleInt
