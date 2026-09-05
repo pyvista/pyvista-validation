@@ -1610,7 +1610,7 @@ def validate_arrayN(  # noqa: N802
     Scalar 0-dimensional values are automatically reshaped to be 1D.
 
     >>> validate_arrayN(42.0)
-    array([42.0])
+    array([42.])
 
     2D arrays where the first dimension is unity are automatically
     reshaped to be 1D.
@@ -1869,7 +1869,7 @@ def validate_array3(
     a 3-element 1D array.
 
     >>> validate_array3(42.0, broadcast=True)
-    array([42.0, 42.0, 42.0])
+    array([42., 42., 42.])
 
     Add additional constraints if needed.
 

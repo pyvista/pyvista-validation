@@ -93,7 +93,7 @@ the constraints as keyword arguments:
 array([1., 2., 3.])
 ```
 
-`check` functions return nothing and raise on failure:
+`check` functions return their input unchanged and raise on failure:
 
 ```python
 >>> from pyvista_validation import check_range
