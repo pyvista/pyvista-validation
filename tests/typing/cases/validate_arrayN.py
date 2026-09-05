@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import numpy.typing as npt
 from type_assert import assert_types
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 from pyvista_validation import validate_arrayN
 from pyvista_validation import validate_arrayN_unsigned
@@ -102,3 +107,11 @@ assert_types(validate_arrayN_unsigned([1, 2], to_tuple=True), tuple[int, ...])
 assert_types(validate_arrayN_unsigned([1, 2], to_list=flag()), _ArrayNUnsignedOut)
 assert_types(validate_arrayN_unsigned(np.array([1, 2], dtype=np.uint16)), npt.NDArray[np.int64])
 assert_types(validate_arrayN_unsigned([1.0, 2.0], reshape=False), npt.NDArray[np.int64])
+
+
+def int16_vector() -> npt.NDArray[np.int16] | Sequence[np.int16]:
+    """Return a value typed as either an array or a sequence of the same scalar."""
+    return np.ones(3, dtype=np.int16)
+
+
+assert_types(validate_arrayN(int16_vector()), npt.NDArray[np.int16])
