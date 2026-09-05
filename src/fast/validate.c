@@ -52,6 +52,7 @@ enum {
     A_COUNT,
 };
 static params ARRAY_PARAMS = {ARRAY_NAMES, NULL, A_COUNT, 1, 1};
+static PyObject *THREE_BY_THREE, *TRANSFORM_SHAPES;
 
 /* validate_array on bound arguments: a new reference, FALLBACK, or NULL. */
 static PyObject *array_core(PyObject *const *a)
@@ -269,6 +270,11 @@ static int build_specs(void)
     spec.three = Py_BuildValue("(i)", 3);
     spec.dimensionalities = Py_BuildValue("[ii]", 0, 3);
     spec.int_type = Py_NewRef((PyObject *)&PyLong_Type);
+    THREE_BY_THREE = Py_BuildValue("(ii)", 3, 3);
+    TRANSFORM_SHAPES = Py_BuildValue("[(ii)(ii)]", 3, 3, 4, 4);
+    if (THREE_BY_THREE == NULL || TRANSFORM_SHAPES == NULL) {
+        return -1;
+    }
     for (int i = 0; i < 4; i++) {
         if (spec.three_shapes[i] == NULL) {
             return -1;
@@ -514,4 +520,208 @@ static PyObject *fast_validate_dimensionality(PyObject *const *args, Py_ssize_t 
     PyObject *result = array_core(a);
     Py_XDECREF(number);
     return result;
+}
+
+/* ---- Transforms ------------------------------------------------------------------------ */
+
+static const char *const TRANSFORM_NAMES[] = {"transform", "must_be_finite", "name"};
+static params TRANSFORM4X4_PARAMS = {TRANSFORM_NAMES, NULL, 3, 1, 1};
+static params TRANSFORM3X3_PARAMS = {TRANSFORM_NAMES, NULL, 3, 1, 1};
+
+static PyObject *lazy_module;
+
+/* A class from pyvista_validation._lazy_import, imported on first use like Python does. */
+static PyObject *lazy_class(const char *name)
+{
+    if (lazy_module == NULL) {
+        lazy_module = PyImport_ImportModule("pyvista_validation._lazy_import");
+        if (lazy_module == NULL) {
+            PyErr_Clear();
+            return NULL;
+        }
+    }
+    PyObject *cls = PyObject_GetAttrString(lazy_module, name);
+    if (cls == NULL) {
+        PyErr_Clear();
+    }
+    return cls;
+}
+
+static int is_lazy_instance(PyObject *obj, const char *name)
+{
+    PyObject *cls = lazy_class(name);
+    if (cls == NULL) {
+        return 0;
+    }
+    int result = PyObject_IsInstance(obj, cls);
+    Py_DECREF(cls);
+    if (result < 0) {
+        PyErr_Clear();
+        return 0;
+    }
+    return result;
+}
+
+/* What NumPy turns into a numeric array without asking the object: Python only tries the
+ * VTK and SciPy types once validate_array has rejected the input as not array-like. */
+static int array_like(PyObject *obj)
+{
+    return PyArray_Check(obj) || PyList_Check(obj) || PyTuple_Check(obj) || PyFloat_Check(obj) ||
+           PyLong_Check(obj) || PyArray_IsScalar(obj, Generic);
+}
+
+/* A VTK matrix as a float64 array, read in one call through GetData(). NULL to fall back. */
+static PyObject *vtk_matrix(PyObject *matrix, int size)
+{
+    PyObject *data = PyObject_CallMethod(matrix, "GetData", NULL);
+    if (data == NULL) {
+        PyErr_Clear();
+        return NULL;
+    }
+    if (!PyTuple_Check(data) || PyTuple_Size(data) != size * size) {
+        Py_DECREF(data);
+        return NULL;
+    }
+    npy_intp dims[2] = {size, size};
+    PyObject *array = PyArray_SimpleNew(2, dims, NPY_DOUBLE);
+    if (array == NULL) {
+        Py_DECREF(data);
+        return NULL;
+    }
+    double *values = (double *)PyArray_DATA((PyArrayObject *)array);
+    for (int i = 0; i < size * size; i++) {
+        values[i] = PyFloat_AsDouble(PyTuple_GetItem(data, i));
+    }
+    Py_DECREF(data);
+    if (PyErr_Occurred()) {
+        PyErr_Clear();
+        Py_DECREF(array);
+        return NULL;
+    }
+    return array;
+}
+
+/* validate_array with a shape constraint and the finite check, as the transforms call it. */
+static PyObject *shaped_array(PyObject *arr, PyObject *shape, int must_be_finite)
+{
+    PyObject *a[A_COUNT] = {NULL};
+    a[A_ARR] = arr;
+    a[A_SHAPE] = shape;
+    a[A_FINITE] = must_be_finite ? Py_True : Py_False;
+    return array_core(a);
+}
+
+/* validate_transform3x3 on its input: a new reference, or FALLBACK. */
+static PyObject *transform3x3(PyObject *transform, int must_be_finite)
+{
+    if (array_like(transform)) {
+        return shaped_array(transform, THREE_BY_THREE, must_be_finite);
+    }
+    if (is_lazy_instance(transform, "vtkMatrix3x3")) {
+        PyObject *array = vtk_matrix(transform, 3);
+        if (array == NULL) {
+            RETURN_FALLBACK;
+        }
+        return array;
+    }
+    if (is_lazy_instance(transform, "Rotation")) {
+        PyObject *matrix = PyObject_CallMethod(transform, "as_matrix", NULL);
+        if (matrix == NULL) {
+            PyErr_Clear();
+            RETURN_FALLBACK;
+        }
+        PyObject *result = transform3x3(matrix, must_be_finite);
+        Py_DECREF(matrix);
+        return result;
+    }
+    RETURN_FALLBACK;
+}
+
+/* A 3x3 array embedded in the 4x4 identity, as float64. */
+static PyObject *pad_to_4x4(PyObject *matrix)
+{
+    PyObject *doubles = PyArray_FromArray((PyArrayObject *)matrix, PyArray_DescrFromType(NPY_DOUBLE),
+                                          NPY_ARRAY_CARRAY_RO | NPY_ARRAY_FORCECAST);
+    if (doubles == NULL) {
+        return NULL;
+    }
+    npy_intp dims[2] = {4, 4};
+    PyObject *padded = PyArray_ZEROS(2, dims, NPY_DOUBLE, 0);
+    if (padded == NULL) {
+        Py_DECREF(doubles);
+        return NULL;
+    }
+    const double *source = (const double *)PyArray_DATA((PyArrayObject *)doubles);
+    double *target = (double *)PyArray_DATA((PyArrayObject *)padded);
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            target[4 * i + j] = source[3 * i + j];
+        }
+    }
+    target[15] = 1.0;
+    Py_DECREF(doubles);
+    return padded;
+}
+
+static PyObject *fast_validate_transform3x3(PyObject *const *args, Py_ssize_t nargs,
+                                            PyObject *kwnames)
+{
+    PyObject *a[3];
+    if (bind(&TRANSFORM3X3_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL ||
+        (a[2] != NULL && !PyUnicode_Check(a[2]))) {
+        RETURN_FALLBACK;
+    }
+    int must_be_finite = truth(a[1], 1);
+    if (must_be_finite < 0) {
+        PyErr_Clear();
+        RETURN_FALLBACK;
+    }
+    return transform3x3(a[0], must_be_finite);
+}
+
+static PyObject *fast_validate_transform4x4(PyObject *const *args, Py_ssize_t nargs,
+                                            PyObject *kwnames)
+{
+    PyObject *a[3];
+    if (bind(&TRANSFORM4X4_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL ||
+        (a[2] != NULL && !PyUnicode_Check(a[2]))) {
+        RETURN_FALLBACK;
+    }
+    int must_be_finite = truth(a[1], 1);
+    if (must_be_finite < 0) {
+        PyErr_Clear();
+        RETURN_FALLBACK;
+    }
+    PyObject *transform = a[0];
+    PyObject *matrix;
+    if (array_like(transform)) {
+        matrix = shaped_array(transform, TRANSFORM_SHAPES, must_be_finite);
+    }
+    else if (is_lazy_instance(transform, "vtkMatrix4x4")) {
+        matrix = vtk_matrix(transform, 4);
+        if (matrix == NULL) {
+            RETURN_FALLBACK;
+        }
+    }
+    else if (is_lazy_instance(transform, "vtkTransform")) {
+        PyObject *inner = PyObject_CallMethod(transform, "GetMatrix", NULL);
+        matrix = inner == NULL ? NULL : vtk_matrix(inner, 4);
+        Py_XDECREF(inner);
+        if (matrix == NULL) {
+            PyErr_Clear();
+            RETURN_FALLBACK;
+        }
+    }
+    else {
+        matrix = transform3x3(transform, must_be_finite);
+    }
+    if (matrix == FALLBACK || matrix == NULL) {
+        return matrix;
+    }
+    if (PyArray_NDIM((PyArrayObject *)matrix) == 2 && PyArray_DIM((PyArrayObject *)matrix, 0) == 3) {
+        PyObject *padded = pad_to_4x4(matrix);
+        Py_DECREF(matrix);
+        return padded;
+    }
+    return matrix;
 }

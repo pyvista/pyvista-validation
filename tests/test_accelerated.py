@@ -396,3 +396,53 @@ def test_families_agree(name, flags, pure):
             if name == 'validate_arrayN_unsigned' and rng.random() < 0.5:
                 kwargs['dtype_out'] = rng.choice([int, np.uint8, 'int32', float])
             assert_same(fast, slow, value, **kwargs)
+
+
+def transform_inputs():
+    """Return the inputs the transform validators take, and some they reject."""
+    inputs = [
+        np.eye(3), np.eye(4), np.eye(3, dtype=int), np.eye(4, dtype=int), np.eye(3).tolist(),
+        np.arange(16.0).reshape(4, 4), np.arange(9.0).reshape(3, 3).T, np.eye(2), np.ones(3),
+        np.full((3, 3), np.nan), np.full((4, 4), np.inf), 1.0, [1, 2, 3], 'abc', None, object(),
+        np.array(['a']), NdarraySubclass(np.eye(3)),
+    ]  # fmt: skip
+    if HAS_VTK:
+        rotated = vtkMatrix3x3()
+        rotated.SetElement(0, 1, 5.0)
+        translated = vtkTransform()
+        translated.Translate(1, 2, 3)
+        translated.RotateZ(90)
+        inputs += [vtkMatrix3x3(), rotated, vtkMatrix4x4(), vtkTransform(), translated]
+    if HAS_SCIPY:
+        inputs += [Rotation.identity(), Rotation.from_euler('xyz', [10, 20, 30], degrees=True)]
+    return inputs
+
+
+try:
+    from vtkmodules.vtkCommonMath import vtkMatrix3x3
+    from vtkmodules.vtkCommonMath import vtkMatrix4x4
+    from vtkmodules.vtkCommonTransforms import vtkTransform
+except ModuleNotFoundError:
+    HAS_VTK = False
+else:
+    HAS_VTK = True
+try:
+    from scipy.spatial.transform import Rotation
+except ModuleNotFoundError:
+    HAS_SCIPY = False
+else:
+    HAS_SCIPY = True
+
+
+@pytest.mark.parametrize('transform', transform_inputs(), ids=lambda x: type(x).__name__)
+def test_transforms_agree(transform, pure):
+    for must_be_finite in (True, False):
+        for name in ('T', 1):
+            assert_same(
+                pyvista_validation.validate_transform4x4, pure.validate_transform4x4, transform,
+                must_be_finite=must_be_finite, name=name,
+            )  # fmt: skip
+            assert_same(
+                pyvista_validation.validate_transform3x3, pure.validate_transform3x3, transform,
+                must_be_finite=must_be_finite, name=name,
+            )  # fmt: skip
