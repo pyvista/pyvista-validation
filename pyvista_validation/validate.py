@@ -1339,7 +1339,7 @@ def validate_data_range(
     kwargs.setdefault('name', 'Data Range')
     _set_default_kwarg_mandatory(cast('dict[str, object]', kwargs), 'must_have_shape', 2)
     _set_default_kwarg_mandatory(cast('dict[str, object]', kwargs), 'must_be_sorted', True)
-    if 'to_list' not in kwargs:
+    if not kwargs.get('to_list'):
         kwargs.setdefault('to_tuple', True)
     return cast('_DataRangeAnyOut', _validate_any(rng, **kwargs))
 

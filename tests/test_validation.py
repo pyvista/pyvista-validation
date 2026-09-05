@@ -1771,9 +1771,6 @@ def test_validate_data_range_forwards_constraints():
     assert all(type(bound) is float for bound in out)
 
 
-@pytest.mark.xfail(
-    strict=True, reason='an explicit to_list=False switches the output from a tuple to an array'
-)
 def test_validate_data_range_returns_a_tuple_when_to_list_is_false():
     assert type(validate_data_range([0, 1], to_list=False)) is tuple
 
