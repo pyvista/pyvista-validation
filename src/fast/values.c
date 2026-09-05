@@ -195,16 +195,75 @@ static limit unsigned_limit(const bound *b, int set, int strict, int is_low)
         else BLOCK_LOOP(CONVERT(x[k * step]) <= high_cmp)                                       \
     }
 
+/* A bound no element of the type can cross needs no loop, and a lower bound at or above zero
+ * already says the elements are nonnegative. */
+static void trim_float_limits(limit *low, limit *high, int *nonnegative)
+{
+    if (low->kind == L_DBL && !low->strict && low->d == -INFINITY) {
+        low->kind = L_ALWAYS;
+    }
+    if (high->kind == L_DBL && !high->strict && high->d == INFINITY) {
+        high->kind = L_ALWAYS;
+    }
+    if (low->kind == L_DBL && !low->strict && low->d >= 0) {
+        *nonnegative = 0;
+    }
+}
+static void trim_signed_limits(limit *low, limit *high, npy_int64 lowest, npy_int64 highest,
+                               int *nonnegative)
+{
+    if (low->kind == L_INT) {
+        if (low->strict ? low->i < lowest : low->i <= lowest) {
+            low->kind = L_ALWAYS;
+        }
+        else if (low->strict ? low->i >= highest : low->i > highest) {
+            low->kind = L_NEVER;
+        }
+        else if (low->strict ? low->i >= -1 : low->i >= 0) {
+            *nonnegative = 0;
+        }
+    }
+    if (high->kind == L_INT) {
+        if (high->strict ? high->i > highest : high->i >= highest) {
+            high->kind = L_ALWAYS;
+        }
+        else if (high->strict ? high->i <= lowest : high->i < lowest) {
+            high->kind = L_NEVER;
+        }
+    }
+}
+static void trim_unsigned_limits(limit *low, limit *high, npy_uint64 highest)
+{
+    if (low->kind == L_UINT) {
+        if (!low->strict && low->u == 0) {
+            low->kind = L_ALWAYS;
+        }
+        else if (low->strict ? low->u >= highest : low->u > highest) {
+            low->kind = L_NEVER;
+        }
+    }
+    if (high->kind == L_UINT) {
+        if (high->strict ? high->u > highest : high->u >= highest) {
+            high->kind = L_ALWAYS;
+        }
+        else if (high->strict && high->u == 0) {
+            high->kind = L_NEVER;
+        }
+    }
+}
+
 #define DEFINE_FLOAT_CHECK(NAME, CTYPE, FABS, FLOOR, LARGEST)                                   \
     static int NAME(const CTYPE *x, npy_intp n, npy_intp step, const values_spec *s)            \
     {                                                                                           \
         limit low = float_limit(&s->low, s->low_set, s->strict_low);                            \
         limit high = float_limit(&s->high, s->high_set, s->strict_high);                        \
+        int nonnegative = s->nonnegative;                                                       \
+        trim_float_limits(&low, &high, &nonnegative);                                           \
         for (npy_intp start = 0; start < n; start += BLOCK) {                                   \
             npy_intp end = start + BLOCK < n ? start + BLOCK : n;                               \
             int bad = 0;                                                                        \
             if (s->finite) BLOCK_LOOP(FABS(x[k * step]) <= LARGEST)                             \
-            if (s->nonnegative) BLOCK_LOOP(x[k * step] >= 0)                                    \
+            if (nonnegative) BLOCK_LOOP(x[k * step] >= 0)                                       \
             if (s->integer) BLOCK_LOOP(x[k * step] == FLOOR(x[k * step]))                       \
             LIMIT_LOOPS(low.d, high.d, (double))                                                \
             if (bad) {                                                                          \
@@ -213,15 +272,17 @@ static limit unsigned_limit(const bound *b, int set, int strict, int is_low)
         }                                                                                       \
         return 1;                                                                               \
     }
-#define DEFINE_SIGNED_CHECK(NAME, CTYPE)                                                        \
+#define DEFINE_SIGNED_CHECK(NAME, CTYPE, LOWEST, HIGHEST)                                       \
     static int NAME(const CTYPE *x, npy_intp n, npy_intp step, const values_spec *s)            \
     {                                                                                           \
         limit low = signed_limit(&s->low, s->low_set, s->strict_low, 1);                        \
         limit high = signed_limit(&s->high, s->high_set, s->strict_high, 0);                    \
+        int nonnegative = s->nonnegative;                                                       \
+        trim_signed_limits(&low, &high, LOWEST, HIGHEST, &nonnegative);                         \
         for (npy_intp start = 0; start < n; start += BLOCK) {                                   \
             npy_intp end = start + BLOCK < n ? start + BLOCK : n;                               \
             int bad = 0;                                                                        \
-            if (s->nonnegative) BLOCK_LOOP(x[k * step] >= 0)                                    \
+            if (nonnegative) BLOCK_LOOP(x[k * step] >= 0)                                       \
             LIMIT_LOOPS(low.i, high.i, (npy_int64))                                             \
             if (bad) {                                                                          \
                 return 0;                                                                       \
@@ -229,11 +290,12 @@ static limit unsigned_limit(const bound *b, int set, int strict, int is_low)
         }                                                                                       \
         return 1;                                                                               \
     }
-#define DEFINE_UNSIGNED_CHECK(NAME, CTYPE)                                                      \
+#define DEFINE_UNSIGNED_CHECK(NAME, CTYPE, HIGHEST)                                             \
     static int NAME(const CTYPE *x, npy_intp n, npy_intp step, const values_spec *s)            \
     {                                                                                           \
         limit low = unsigned_limit(&s->low, s->low_set, s->strict_low, 1);                      \
         limit high = unsigned_limit(&s->high, s->high_set, s->strict_high, 0);                  \
+        trim_unsigned_limits(&low, &high, HIGHEST);                                             \
         for (npy_intp start = 0; start < n; start += BLOCK) {                                   \
             npy_intp end = start + BLOCK < n ? start + BLOCK : n;                               \
             int bad = 0;                                                                        \
@@ -247,14 +309,14 @@ static limit unsigned_limit(const bound *b, int set, int strict, int is_low)
 
 DEFINE_FLOAT_CHECK(check_double, npy_double, fabs, floor, DBL_MAX)
 DEFINE_FLOAT_CHECK(check_float, npy_float, fabsf, floorf, FLT_MAX)
-DEFINE_SIGNED_CHECK(check_int8, npy_int8)
-DEFINE_SIGNED_CHECK(check_int16, npy_int16)
-DEFINE_SIGNED_CHECK(check_int32, npy_int32)
-DEFINE_SIGNED_CHECK(check_int64, npy_int64)
-DEFINE_UNSIGNED_CHECK(check_uint8, npy_uint8)
-DEFINE_UNSIGNED_CHECK(check_uint16, npy_uint16)
-DEFINE_UNSIGNED_CHECK(check_uint32, npy_uint32)
-DEFINE_UNSIGNED_CHECK(check_uint64, npy_uint64)
+DEFINE_SIGNED_CHECK(check_int8, npy_int8, NPY_MIN_INT8, NPY_MAX_INT8)
+DEFINE_SIGNED_CHECK(check_int16, npy_int16, NPY_MIN_INT16, NPY_MAX_INT16)
+DEFINE_SIGNED_CHECK(check_int32, npy_int32, NPY_MIN_INT32, NPY_MAX_INT32)
+DEFINE_SIGNED_CHECK(check_int64, npy_int64, NPY_MIN_INT64, NPY_MAX_INT64)
+DEFINE_UNSIGNED_CHECK(check_uint8, npy_uint8, NPY_MAX_UINT8)
+DEFINE_UNSIGNED_CHECK(check_uint16, npy_uint16, NPY_MAX_UINT16)
+DEFINE_UNSIGNED_CHECK(check_uint32, npy_uint32, NPY_MAX_UINT32)
+DEFINE_UNSIGNED_CHECK(check_uint64, npy_uint64, NPY_MAX_UINT64)
 
 /* Half floats are converted to a block of floats first. */
 static int check_half(const npy_uint16 *x, npy_intp n, npy_intp step, const values_spec *s)
