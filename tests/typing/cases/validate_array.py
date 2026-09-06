@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 from pyvista_validation import validate_array
 from pyvista_validation._typing import _AnyScalar
+from pyvista_validation._typing import _ArrayLikeOrScalar
 from pyvista_validation._typing import _Floating
 from pyvista_validation._typing import _Scalar
 from pyvista_validation._typing import _ToAnyList
@@ -96,3 +97,37 @@ def floating_matrix() -> npt.NDArray[_Floating] | Sequence[Sequence[float]]:
 
 assert_types(validate_array(float32_matrix()), npt.NDArray[np.float32])
 assert_types(validate_array(floating_matrix(), to_list=True), _ToListFloat)
+
+
+def any_array_like() -> _ArrayLikeOrScalar:
+    """Return a value typed as broadly as the parameter that accepts it."""
+    return [1, 2]
+
+
+# Saying the array is one-dimensional narrows the list and tuple results to a flat container.
+assert_types(validate_array([1, 2], must_have_ndim=1, to_list=True), list[int])
+assert_types(validate_array([1.5, 2.5], must_have_ndim=1, to_list=True), list[float])
+assert_types(
+    validate_array([True], must_have_ndim=1, must_be_real=False, to_list=True), list[bool]
+)
+assert_types(validate_array(['a'], must_have_ndim=1, must_be_real=False, to_list=True), list[str])
+assert_types(validate_array([1, 2], must_have_ndim=1, to_tuple=True), tuple[int, ...])
+assert_types(validate_array([1.5], must_have_ndim=1, to_tuple=True), tuple[float, ...])
+assert_types(
+    validate_array([True], must_have_ndim=1, must_be_real=False, to_tuple=True), tuple[bool, ...]
+)
+assert_types(
+    validate_array(['a'], must_have_ndim=1, must_be_real=False, to_tuple=True), tuple[str, ...]
+)
+assert_types(
+    validate_array([1, 2], must_have_ndim=1, dtype_out=float, to_tuple=True), tuple[float, ...]
+)
+assert_types(validate_array([1, 2], must_have_ndim=1, dtype_out=int, to_list=True), list[int])
+assert_types(
+    validate_array(any_array_like(), must_have_ndim=1, to_list=True),
+    list[bool] | list[int] | list[float],
+)
+assert_types(
+    validate_array(any_array_like(), must_have_ndim=1, to_tuple=True),
+    tuple[bool, ...] | tuple[int, ...] | tuple[float, ...],
+)
