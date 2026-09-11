@@ -10,7 +10,7 @@ dev = [
   'pytest',
   'pytest-cov',
   'scipy-stubs',
-  'type-assert==0.2.1',
+  'type-assert==0.2.3',
 ]
 docs = [
   'numpydoc==1.10.0',
