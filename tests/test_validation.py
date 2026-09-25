@@ -2170,7 +2170,7 @@ _LONGDOUBLE_IS_64_BIT = np.dtype(np.longdouble).itemsize == 8
         (np.int8, False, True, True),
         (np.uint64, False, True, True),
         (np.longlong, False, True, True),
-        (np.bool_, False, False, True),
+        (np.bool_, False, False, False),
         (np.complex128, False, False, False),
         (np.str_, False, False, False),
         (object, False, False, False),

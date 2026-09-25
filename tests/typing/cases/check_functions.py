@@ -183,7 +183,8 @@ assert_types(ANY_FLOATS if _is_floating(ANY_FLOATS) else None, npt.NDArray[_Floa
 assert_types(ANY_INTS if _is_floating(ANY_INTS) else None, npt.NDArray[_Floating] | None)
 assert_types(ANY_INTS if _is_integer(ANY_INTS) else None, npt.NDArray[_Integer] | None)
 assert_types(SCALARS if _is_integer(SCALARS) else None, npt.NDArray[_Integer] | None)
-assert_types(ANY_BOOLS if _is_real(ANY_BOOLS) else None, npt.NDArray[_Scalar] | None)
+assert_types(ANY_INTS if _is_real(ANY_INTS) else None, npt.NDArray[_Real] | None)
+assert_types(ANY_BOOLS if _is_real(ANY_BOOLS) else None, npt.NDArray[_Real] | None)
 assert_types(_is_floating(ONES), bool)
 
 SKIP_RUNTIME = {
