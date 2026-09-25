@@ -23,7 +23,7 @@ jobs:
       with:
         persist-credentials: false
         fetch-depth: 0
-    - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d   # v10.0.1
+    - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7   # v10.2.0
       with:
         enable-cache: false
     - run: uv sync --group dev
@@ -44,7 +44,7 @@ jobs:
       with:
         persist-credentials: false
         fetch-depth: 0
-    - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d   # v10.0.1
+    - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7   # v10.2.0
       with:
         enable-cache: false
     - run: uv sync --group dev --extra all --python ${{ matrix.python-version }}
@@ -71,7 +71,7 @@ jobs:
       with:
         persist-credentials: false
         fetch-depth: 0
-    - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d   # v10.0.1
+    - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7   # v10.2.0
       with:
         enable-cache: false
     - run: uv sync --group dev --extra all --python 3.14
@@ -98,7 +98,7 @@ jobs:
       with:
         persist-credentials: false
         fetch-depth: 0
-    - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d   # v10.0.1
+    - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7   # v10.2.0
       with:
         enable-cache: false
     - run: uv sync --group dev --python ${{ matrix.python-version }}
@@ -121,7 +121,7 @@ jobs:
       with:
         persist-credentials: false
         fetch-depth: 0
-    - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d   # v10.0.1
+    - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7   # v10.2.0
       with:
         enable-cache: false
     - run: sudo apt-get update && sudo apt-get install --yes libgl1 libxrender1 xvfb
@@ -145,7 +145,7 @@ jobs:
       with:
         persist-credentials: false
         fetch-depth: 0
-    - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d   # v10.0.1
+    - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7   # v10.2.0
       with:
         enable-cache: false
     - run: uv sync --group docs --extra all --python 3.14
@@ -177,7 +177,7 @@ jobs:
       with:
         persist-credentials: false
         fetch-depth: 0
-    - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d   # v10.0.1
+    - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7   # v10.2.0
       with:
         enable-cache: false
     - run: uv build --sdist
@@ -200,7 +200,7 @@ jobs:
         persist-credentials: false
         fetch-depth: 0
     - uses: pypa/cibuildwheel@e090b81e30c4d855ea63bf4b6e59204c09a101ae   # v4.2.1
-    - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d   # v10.0.1
+    - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7   # v10.2.0
       if: runner.os == 'Linux'
       with:
         enable-cache: false
