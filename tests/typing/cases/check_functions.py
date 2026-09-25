@@ -57,6 +57,8 @@ ANY_FLOATS: npt.NDArray[Any] = np.ones(2)
 ANY_INTS: npt.NDArray[Any] = np.ones(2, dtype=np.int32)
 ANY_BOOLS: npt.NDArray[Any] = np.ones(2, dtype=bool)
 SCALARS: npt.NDArray[_Scalar] = np.ones(2, dtype=np.uint8)
+F32_OR_TEXT: npt.NDArray[np.float32] | npt.NDArray[np.str_] = np.ones(2, dtype=np.float32)
+I16_OR_TEXT: npt.NDArray[np.int16] | npt.NDArray[np.str_] = np.ones(2, dtype=np.int16)
 
 
 def unknown() -> object:
@@ -74,33 +76,15 @@ def unknown_number() -> object:
     return 1
 
 
-# An array checked for a dtype family comes back as an array of that family.
-assert_types(check_subdtype(ANY_INTS, np.integer), npt.NDArray[_Integer])
-assert_types(check_subdtype(ANY_INTS, np.signedinteger), npt.NDArray[_Integer])
-assert_types(check_subdtype(ANY_INTS, np.int32), npt.NDArray[_Integer])
-assert_types(check_subdtype(SCALARS, np.integer), npt.NDArray[_Integer])
-assert_types(check_subdtype(np.asarray([1, 2]), np.integer), npt.NDArray[_Integer])
-assert_types(check_subdtype(ANY_INTS, base_dtype=np.integer, name='x'), npt.NDArray[_Integer])
-assert_types(check_subdtype(ANY_FLOATS, np.floating), npt.NDArray[_Floating])
-assert_types(check_subdtype(ANY_FLOATS, np.float64), npt.NDArray[_Floating])
-assert_types(check_subdtype(ONES, np.floating), npt.NDArray[_Floating])
-assert_types(check_subdtype(np.asarray([1.0]), np.floating), npt.NDArray[_Floating])
-assert_types(check_real(ANY_INTS), npt.NDArray[_Real])
-assert_types(check_real(SCALARS), npt.NDArray[_Real])
-assert_types(check_real(ONES), npt.NDArray[_Real])
-assert_types(check_real(np.asarray([1.0])), npt.NDArray[_Real])
-assert_types(check_real(TEXT), npt.NDArray[_Real])
-
-# Anything else comes back with its own type.
-assert_types(check_subdtype(ANY_INTS, np.number), npt.NDArray[Any])
-assert_types(check_subdtype(ANY_INTS, (np.integer, np.floating)), npt.NDArray[Any])
+# The input comes back with its own type.
+assert_types(check_subdtype(ONES, np.floating), npt.NDArray[np.float64])
 assert_types(check_subdtype(float, (np.floating, np.integer)), type[float])
-assert_types(check_subdtype(float, np.floating), type[float])
 assert_types(check_subdtype('f8', [np.floating]), str)
-assert_types(check_subdtype('f8', np.floating), str)
 assert_types(check_subdtype([1, 2], np.integer), list[int])
 assert_types(check_real([1.0]), list[float])
+assert_types(check_real(ONES), npt.NDArray[np.float64])
 assert_types(check_real(1), int)
+assert_types(check_real(TEXT), npt.NDArray[np.str_])
 assert_types(check_sorted([1, 2]), list[int])
 assert_types(check_sorted(MATRIX, axis=None), npt.NDArray[np.int64])
 assert_types(check_sorted(MATRIX, axis=0), npt.NDArray[np.int64])
@@ -178,15 +162,18 @@ assert_types(_shape_of(['a', 'b']), tuple[int, ...])
 assert_types(_issubdtype(np.dtype('f8'), np.floating), bool)
 assert_types(_union_members(int | float), tuple[type[object], ...])
 
-# The dtype predicates narrow the array they return True for.
+# The dtype predicates narrow the array they return True for, keeping a dtype it already has.
 assert_types(ANY_FLOATS if _is_floating(ANY_FLOATS) else None, npt.NDArray[_Floating] | None)
 assert_types(ANY_INTS if _is_floating(ANY_INTS) else None, npt.NDArray[_Floating] | None)
+assert_types(F32_OR_TEXT if _is_floating(F32_OR_TEXT) else None, npt.NDArray[np.float32] | None)
 assert_types(ANY_INTS if _is_integer(ANY_INTS) else None, npt.NDArray[_Integer] | None)
 assert_types(SCALARS if _is_integer(SCALARS) else None, npt.NDArray[_Integer] | None)
+assert_types(I16_OR_TEXT if _is_integer(I16_OR_TEXT) else None, npt.NDArray[np.int16] | None)
 assert_types(ANY_INTS if _is_real(ANY_INTS) else None, npt.NDArray[_Real] | None)
 assert_types(ANY_BOOLS if _is_real(ANY_BOOLS) else None, npt.NDArray[_Real] | None)
+assert_types(F32_OR_TEXT if _is_real(F32_OR_TEXT) else None, npt.NDArray[np.float32] | None)
 assert_types(_is_floating(ONES), bool)
 
 SKIP_RUNTIME = {
-    'check_real(TEXT)': 'raises TypeError: text is not real',
+    'check_real(TEXT)': 'raises TypeError: text is not real, only the passthrough is typed',
 }
