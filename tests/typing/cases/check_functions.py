@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from collections.abc import Sequence
 import numbers
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -30,6 +31,9 @@ from pyvista_validation import check_sorted
 from pyvista_validation import check_string
 from pyvista_validation import check_subdtype
 from pyvista_validation import check_type
+from pyvista_validation._typing import _Floating
+from pyvista_validation._typing import _Integer
+from pyvista_validation._typing import _Real
 from pyvista_validation._typing import _Scalar
 from pyvista_validation.check import _dtype_of
 from pyvista_validation.check import _issubdtype
@@ -45,6 +49,10 @@ INTS: npt.NDArray[np.int64] = np.ones(2, dtype=np.int64)
 MATRIX: npt.NDArray[np.int64] = np.array([[0, 1], [2, 3]])
 SCALAR: npt.NDArray[np.float64] = np.array(1.0)
 TEXT: npt.NDArray[np.str_] = np.array(['a', 'b'])
+# Arrays whose dtype a type checker cannot see, as np.asarray returns them.
+ANY_FLOATS: npt.NDArray[Any] = np.ones(2)
+ANY_INTS: npt.NDArray[Any] = np.ones(2, dtype=np.int32)
+SCALARS: npt.NDArray[_Scalar] = np.ones(2, dtype=np.uint8)
 
 
 def unknown() -> object:
@@ -62,15 +70,33 @@ def unknown_number() -> object:
     return 1
 
 
-# The input comes back with its own type.
-assert_types(check_subdtype(ONES, np.floating), npt.NDArray[np.float64])
+# An array checked for a dtype family comes back as an array of that family.
+assert_types(check_subdtype(ANY_INTS, np.integer), npt.NDArray[_Integer])
+assert_types(check_subdtype(ANY_INTS, np.signedinteger), npt.NDArray[_Integer])
+assert_types(check_subdtype(ANY_INTS, np.int32), npt.NDArray[_Integer])
+assert_types(check_subdtype(SCALARS, np.integer), npt.NDArray[_Integer])
+assert_types(check_subdtype(np.asarray([1, 2]), np.integer), npt.NDArray[_Integer])
+assert_types(check_subdtype(ANY_INTS, base_dtype=np.integer, name='x'), npt.NDArray[_Integer])
+assert_types(check_subdtype(ANY_FLOATS, np.floating), npt.NDArray[_Floating])
+assert_types(check_subdtype(ANY_FLOATS, np.float64), npt.NDArray[_Floating])
+assert_types(check_subdtype(ONES, np.floating), npt.NDArray[_Floating])
+assert_types(check_subdtype(np.asarray([1.0]), np.floating), npt.NDArray[_Floating])
+assert_types(check_real(ANY_INTS), npt.NDArray[_Real])
+assert_types(check_real(SCALARS), npt.NDArray[_Real])
+assert_types(check_real(ONES), npt.NDArray[_Real])
+assert_types(check_real(np.asarray([1.0])), npt.NDArray[_Real])
+assert_types(check_real(TEXT), npt.NDArray[_Real])
+
+# Anything else comes back with its own type.
+assert_types(check_subdtype(ANY_INTS, np.number), npt.NDArray[Any])
+assert_types(check_subdtype(ANY_INTS, (np.integer, np.floating)), npt.NDArray[Any])
 assert_types(check_subdtype(float, (np.floating, np.integer)), type[float])
+assert_types(check_subdtype(float, np.floating), type[float])
 assert_types(check_subdtype('f8', [np.floating]), str)
+assert_types(check_subdtype('f8', np.floating), str)
 assert_types(check_subdtype([1, 2], np.integer), list[int])
 assert_types(check_real([1.0]), list[float])
-assert_types(check_real(ONES), npt.NDArray[np.float64])
 assert_types(check_real(1), int)
-assert_types(check_real(TEXT), npt.NDArray[np.str_])
 assert_types(check_sorted([1, 2]), list[int])
 assert_types(check_sorted(MATRIX, axis=None), npt.NDArray[np.int64])
 assert_types(check_sorted(MATRIX, axis=0), npt.NDArray[np.int64])
@@ -149,5 +175,5 @@ assert_types(_issubdtype(np.dtype('f8'), np.floating), bool)
 assert_types(_union_members(int | float), tuple[type[object], ...])
 
 SKIP_RUNTIME = {
-    'check_real(TEXT)': 'raises TypeError: text is not real, only the passthrough is typed',
+    'check_real(TEXT)': 'raises TypeError: text is not real',
 }

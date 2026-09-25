@@ -11,6 +11,7 @@ A ``check`` function typically:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from collections.abc import Container
 from collections.abc import Iterable
 from collections.abc import Sequence
@@ -20,6 +21,7 @@ import reprlib
 import sys
 from types import UnionType
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import Union
 from typing import cast
 from typing import get_args
@@ -44,6 +46,9 @@ if TYPE_CHECKING:
     from pyvista_validation._typing import _AnyArrayLikeOrScalar
     from pyvista_validation._typing import _ArrayLikeOrScalar
     from pyvista_validation._typing import _DTypeLike
+    from pyvista_validation._typing import _Floating
+    from pyvista_validation._typing import _Integer
+    from pyvista_validation._typing import _Real
     from pyvista_validation._typing import _Scalar
 
 
@@ -51,6 +56,8 @@ _Shape = tuple[()] | tuple[int, ...]
 _ShapeLike = int | _Shape
 # What isinstance() accepts, plus the union objects the type-based checks unpack.
 _ClassInfo = type[object] | tuple[type[object], ...] | UnionType
+# A NumPy scalar class, abstract ones included.
+_ScalarClass = Callable[[], 'np.generic[object]']
 
 # Every check returns its input unchanged; these carry the input's static type through.
 _ArrayT = TypeVar('_ArrayT', bound='_ArrayLikeOrScalar', default='_ArrayLikeOrScalar')
@@ -75,13 +82,22 @@ _T2 = TypeVar('_T2', default=object)
 _T3 = TypeVar('_T3', default=object)
 
 
+# The base dtypes are typed as callables because ``type[...]`` rejects the abstract ``np.integer``.
+# fmt: off
+@overload
+def check_subdtype(input_obj: npt.NDArray[Any], /, base_dtype: Callable[..., np.integer[Any]], *, name: str = ...) -> npt.NDArray[_Integer]: ...
+@overload
+def check_subdtype(input_obj: npt.NDArray[Any], /, base_dtype: Callable[..., np.floating[Any]], *, name: str = ...) -> npt.NDArray[_Floating]: ...
+@overload
+def check_subdtype(input_obj: _DTypeOrArrayT, /, base_dtype: _DTypeLike | tuple[_DTypeLike, ...] | list[_DTypeLike], *, name: str = ...) -> _DTypeOrArrayT: ...
+# fmt: on
 def check_subdtype(
-    input_obj: _DTypeOrArrayT,
+    input_obj: _DTypeLike | _AnyArrayLikeOrScalar,
     /,
-    base_dtype: _DTypeLike | tuple[_DTypeLike, ...] | list[_DTypeLike],
+    base_dtype: _DTypeLike | _ScalarClass | tuple[_DTypeLike, ...] | list[_DTypeLike],
     *,
     name: str = 'Input',
-) -> _DTypeOrArrayT:
+) -> object:
     """Check if an input's data-type is a subtype of another data-type or data-types.
 
     Parameters
@@ -101,7 +117,8 @@ def check_subdtype(
     Returns
     -------
     object
-        The input, unchanged.
+        The input, unchanged. Type checkers see an array checked against
+        ``np.integer`` or ``np.floating`` as an array of that kind.
 
     Raises
     ------
@@ -136,7 +153,7 @@ def check_subdtype(
     """
     input_dtype = _dtype_of(input_obj)
     if not isinstance(base_dtype, (tuple, list)):
-        base_dtype = [base_dtype]
+        base_dtype = [cast('_DTypeLike', base_dtype)]
     if not any(_issubdtype(input_dtype, base) for base in base_dtype):
         # Not a subdtype, so raise error
         msg = f"{name} has incorrect dtype of '{input_dtype.name}'. "
@@ -148,7 +165,13 @@ def check_subdtype(
     return input_obj
 
 
-def check_real(array: _AnyArrayT, /, *, name: str = 'Array') -> _AnyArrayT:
+# fmt: off
+@overload
+def check_real(array: npt.NDArray[Any], /, *, name: str = ...) -> npt.NDArray[_Real]: ...
+@overload
+def check_real(array: _AnyArrayT, /, *, name: str = ...) -> _AnyArrayT: ...
+# fmt: on
+def check_real(array: _AnyArrayLikeOrScalar, /, *, name: str = 'Array') -> object:
     """Check if an array has real numbers (float or integer type).
 
     Notes
@@ -169,7 +192,7 @@ def check_real(array: _AnyArrayT, /, *, name: str = 'Array') -> _AnyArrayT:
     Returns
     -------
     array_like
-        The input, unchanged.
+        The input, unchanged. Type checkers see an array as having a real dtype.
 
     Raises
     ------
