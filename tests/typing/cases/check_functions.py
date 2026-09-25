@@ -36,6 +36,9 @@ from pyvista_validation._typing import _Integer
 from pyvista_validation._typing import _Real
 from pyvista_validation._typing import _Scalar
 from pyvista_validation.check import _dtype_of
+from pyvista_validation.check import _is_floating
+from pyvista_validation.check import _is_integer
+from pyvista_validation.check import _is_real
 from pyvista_validation.check import _issubdtype
 from pyvista_validation.check import _Shape
 from pyvista_validation.check import _shape_of
@@ -52,6 +55,7 @@ TEXT: npt.NDArray[np.str_] = np.array(['a', 'b'])
 # Arrays whose dtype a type checker cannot see, as np.asarray returns them.
 ANY_FLOATS: npt.NDArray[Any] = np.ones(2)
 ANY_INTS: npt.NDArray[Any] = np.ones(2, dtype=np.int32)
+ANY_BOOLS: npt.NDArray[Any] = np.ones(2, dtype=bool)
 SCALARS: npt.NDArray[_Scalar] = np.ones(2, dtype=np.uint8)
 
 
@@ -173,6 +177,14 @@ assert_types(_shape_of([1, 2]), tuple[int, ...])
 assert_types(_shape_of(['a', 'b']), tuple[int, ...])
 assert_types(_issubdtype(np.dtype('f8'), np.floating), bool)
 assert_types(_union_members(int | float), tuple[type[object], ...])
+
+# The dtype predicates narrow the array they return True for.
+assert_types(ANY_FLOATS if _is_floating(ANY_FLOATS) else None, npt.NDArray[_Floating] | None)
+assert_types(ANY_INTS if _is_floating(ANY_INTS) else None, npt.NDArray[_Floating] | None)
+assert_types(ANY_INTS if _is_integer(ANY_INTS) else None, npt.NDArray[_Integer] | None)
+assert_types(SCALARS if _is_integer(SCALARS) else None, npt.NDArray[_Integer] | None)
+assert_types(ANY_BOOLS if _is_real(ANY_BOOLS) else None, npt.NDArray[_Scalar] | None)
+assert_types(_is_floating(ONES), bool)
 
 SKIP_RUNTIME = {
     'check_real(TEXT)': 'raises TypeError: text is not real',
