@@ -56,7 +56,8 @@ TEXT: npt.NDArray[np.str_] = np.array(['a', 'b'])
 ANY_FLOATS: npt.NDArray[Any] = np.ones(2)
 ANY_INTS: npt.NDArray[Any] = np.ones(2, dtype=np.int32)
 ANY_BOOLS: npt.NDArray[Any] = np.ones(2, dtype=bool)
-SCALARS: npt.NDArray[_Scalar] = np.ones(2, dtype=np.uint8)
+# Arrays typed with a union of dtypes.
+SCALAR_DTYPES: npt.NDArray[_Scalar] = np.ones(2, dtype=np.uint8)
 F32_OR_TEXT: npt.NDArray[np.float32] | npt.NDArray[np.str_] = np.ones(2, dtype=np.float32)
 I16_OR_TEXT: npt.NDArray[np.int16] | npt.NDArray[np.str_] = np.ones(2, dtype=np.int16)
 
@@ -167,7 +168,7 @@ assert_types(ANY_FLOATS if _is_floating(ANY_FLOATS) else None, npt.NDArray[_Floa
 assert_types(ANY_INTS if _is_floating(ANY_INTS) else None, npt.NDArray[_Floating] | None)
 assert_types(F32_OR_TEXT if _is_floating(F32_OR_TEXT) else None, npt.NDArray[np.float32] | None)
 assert_types(ANY_INTS if _is_integer(ANY_INTS) else None, npt.NDArray[_Integer] | None)
-assert_types(SCALARS if _is_integer(SCALARS) else None, npt.NDArray[_Integer] | None)
+assert_types(SCALAR_DTYPES if _is_integer(SCALAR_DTYPES) else None, npt.NDArray[_Integer] | None)
 assert_types(I16_OR_TEXT if _is_integer(I16_OR_TEXT) else None, npt.NDArray[np.int16] | None)
 assert_types(ANY_INTS if _is_real(ANY_INTS) else None, npt.NDArray[_Real] | None)
 assert_types(ANY_BOOLS if _is_real(ANY_BOOLS) else None, npt.NDArray[_Real] | None)

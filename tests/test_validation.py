@@ -2162,6 +2162,7 @@ def test_check_real_accepts_every_integer_and_floating_dtype(dtype):
     ('dtype', 'floating', 'integer', 'real'),
     [
         (np.float64, True, False, True),
+        (np.float32, True, False, True),
         (np.float16, True, False, True),
         (np.longdouble, False, False, False),
         (np.int8, False, True, True),
@@ -2176,7 +2177,7 @@ def test_check_real_accepts_every_integer_and_floating_dtype(dtype):
     ],
 )
 def test_dtype_predicates(dtype, floating, integer, real):
-    """The dtype predicates reject bool, complex, text, time and extended-precision dtypes."""
+    """Each dtype predicate accepts exactly the dtypes of the type it narrows to."""
     array = np.zeros(2, dtype=dtype)
     assert _is_floating(array) is floating
     assert _is_integer(array) is integer
