@@ -55,7 +55,7 @@ jobs:
       run: uv run pytest tests/ --ignore=tests/typing --cov --cov-append --cov-report=xml
       env:
         PYVISTA_VALIDATION_ACCELERATE: 'false'
-    - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f   # v7.0.0
+    - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5   # v7.1.1
       with:
         files: ./coverage.xml
         flags: tests
@@ -78,7 +78,7 @@ jobs:
     - run: uv run --no-sync mypy --cobertura-xml-report typing-coverage --txt-report typing-coverage
     - run: cat typing-coverage/index.txt
     - run: uv run --no-sync pytest tests/typing --no-cov
-    - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f   # v7.0.0
+    - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5   # v7.1.1
       with:
         files: ./typing-coverage/cobertura.xml
         flags: typing
