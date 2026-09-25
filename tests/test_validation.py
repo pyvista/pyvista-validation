@@ -2041,8 +2041,18 @@ def test_validate_transform4x4_pads_a_3x3_with_the_identity():
     assert validate_transform4x4(np.eye(3, dtype=int)).dtype == np.float64
 
 
-def test_validate_transform4x4_keeps_a_4x4_dtype():
-    assert np.issubdtype(validate_transform4x4(np.eye(4, dtype=int)).dtype, np.integer)
+@pytest.mark.parametrize('dtype', [np.float16, np.float32, np.float64])
+def test_validate_transform4x4_keeps_a_4x4_floating_dtype(dtype):
+    assert validate_transform4x4(np.eye(4, dtype=dtype)).dtype == dtype
+
+
+@pytest.mark.parametrize('dtype', [np.int8, np.int32, np.int64, np.uint8])
+def test_validate_transform4x4_returns_float64_for_a_4x4_integer_array(dtype):
+    matrix = np.arange(16, dtype=dtype).reshape(4, 4)
+    result = validate_transform4x4(matrix)
+    assert result.dtype == np.float64
+    assert np.array_equal(result, matrix)
+    assert validate_transform4x4(matrix.tolist()).dtype == np.float64
 
 
 def test_validate_transform4x4_rejects_non_finite_values():
