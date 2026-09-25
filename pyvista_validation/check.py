@@ -1443,8 +1443,8 @@ def _issubdtype(dtype: np.dtype[np.generic[object]], base: _DTypeLike, /) -> boo
 
 
 def _is_floating(array: npt.NDArray[np.generic[object]], /) -> TypeIs[npt.NDArray[_Floating]]:
-    """Return whether an array has a floating dtype of at most 64 bits."""
-    return array.dtype.kind == 'f' and array.dtype.itemsize <= 8
+    """Return whether an array has a float64, float32 or float16 dtype."""
+    return array.dtype.type in (np.float64, np.float32, np.float16)
 
 
 def _is_integer(array: npt.NDArray[np.generic[object]], /) -> TypeIs[npt.NDArray[_Integer]]:
@@ -1453,8 +1453,8 @@ def _is_integer(array: npt.NDArray[np.generic[object]], /) -> TypeIs[npt.NDArray
 
 
 def _is_real(array: npt.NDArray[np.generic[object]], /) -> TypeIs[npt.NDArray[_Real]]:
-    """Return whether an array has an integer or floating dtype of at most 64 bits."""
-    return array.dtype.kind in 'iuf' and array.dtype.itemsize <= 8
+    """Return whether an array has an integer, float64, float32 or float16 dtype."""
+    return _is_integer(array) or _is_floating(array)
 
 
 def _shape_of(array: _AnyArrayLikeOrScalar, /) -> tuple[int, ...]:

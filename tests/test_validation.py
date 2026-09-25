@@ -2158,26 +2158,25 @@ def test_check_real_accepts_every_integer_and_floating_dtype(dtype):
     assert check_real(array) is array
 
 
-_LONGDOUBLE_IS_64_BIT = np.dtype(np.longdouble).itemsize == 8
-
-
 @pytest.mark.parametrize(
     ('dtype', 'floating', 'integer', 'real'),
     [
         (np.float64, True, False, True),
         (np.float16, True, False, True),
-        (np.longdouble, _LONGDOUBLE_IS_64_BIT, False, _LONGDOUBLE_IS_64_BIT),
+        (np.longdouble, False, False, False),
         (np.int8, False, True, True),
         (np.uint64, False, True, True),
         (np.longlong, False, True, True),
         (np.bool_, False, False, False),
+        (np.complex64, False, False, False),
         (np.complex128, False, False, False),
+        ('m8[s]', False, False, False),
         (np.str_, False, False, False),
         (object, False, False, False),
     ],
 )
 def test_dtype_predicates(dtype, floating, integer, real):
-    """The dtype predicates accept exactly the dtypes their narrowed types name."""
+    """The dtype predicates reject bool, complex, text, time and extended-precision dtypes."""
     array = np.zeros(2, dtype=dtype)
     assert _is_floating(array) is floating
     assert _is_integer(array) is integer
