@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import itertools
 import re
+import subprocess
 import sys
 import types
 from typing import NamedTuple
@@ -1321,6 +1322,14 @@ def test_lazy_import_returns_the_real_vtk_classes():
     assert _lazy_import.vtkMatrix3x3 is vtkMatrix3x3
     assert _lazy_import.vtkMatrix4x4 is vtkMatrix4x4
     assert _lazy_import.vtkTransform is vtkTransform
+
+
+@pytest.mark.parametrize('package', ['scipy', 'vtkmodules'])
+@pytest.mark.parametrize('module', ['pyvista_validation', 'pyvista_validation._typing'])
+def test_optional_dependencies_not_imported(module, package):
+    """Importing the package or its type aliases loads neither SciPy nor VTK."""
+    code = f'import sys, {module}; assert {package!r} not in sys.modules'
+    assert subprocess.run([sys.executable, '-c', code], check=False).returncode == 0
 
 
 @needs_scipy
