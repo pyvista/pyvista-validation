@@ -64,7 +64,7 @@ assert_types(
 )
 assert_types(
     validate_transform4x4([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]),
-    npt.NDArray[np.int64 | np.float64],
+    npt.NDArray[np.float64],
 )
 assert_types(
     validate_transform4x4(((1.0, 0, 0, 0), (0, 1.0, 0, 0), (0, 0, 1.0, 0), (0, 0, 0, 1.0))),
@@ -81,5 +81,5 @@ assert_types(
 )
 assert_types(
     validate_transform4x4([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),
-    npt.NDArray[np.int64 | np.float64],
+    npt.NDArray[np.float64],
 )

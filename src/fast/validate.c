@@ -731,6 +731,12 @@ static PyObject *fast_validate_transform4x4(PyObject *const *args, Py_ssize_t na
         Py_DECREF(matrix);
         return padded;
     }
+    if (!PyArray_ISFLOAT((PyArrayObject *)matrix)) {
+        PyObject *doubles = PyArray_FromArray((PyArrayObject *)matrix,
+                                              PyArray_DescrFromType(NPY_DOUBLE), NPY_ARRAY_FORCECAST);
+        Py_DECREF(matrix);
+        return doubles;
+    }
     return matrix;
 }
 

@@ -414,7 +414,8 @@ def transform_inputs():
         np.eye(3), np.eye(4), np.eye(3, dtype=int), np.eye(4, dtype=int), np.eye(3).tolist(),
         np.arange(16.0).reshape(4, 4), np.arange(9.0).reshape(3, 3).T, np.eye(2), np.ones(3),
         np.full((3, 3), np.nan), np.full((4, 4), np.inf), 1.0, [1, 2, 3], 'abc', None, object(),
-        np.array(['a']), NdarraySubclass(np.eye(3)),
+        np.array(['a']), NdarraySubclass(np.eye(3)), NdarraySubclass(np.eye(4, dtype=int)),
+        np.arange(16).reshape(4, 4).T, np.eye(4, dtype=np.float32),
     ]  # fmt: skip
     if HAS_VTK:
         rotated = vtkMatrix3x3()

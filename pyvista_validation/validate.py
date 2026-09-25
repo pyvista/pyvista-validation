@@ -1003,7 +1003,7 @@ def validate_rotation(
 @overload
 def validate_transform4x4(transform: npt.NDArray[_ScalarT], /, *, must_be_finite: bool = ..., name: str = ...) -> npt.NDArray[_ScalarT | np.float64]: ...
 @overload
-def validate_transform4x4(transform: Sequence[Sequence[int]], /, *, must_be_finite: bool = ..., name: str = ...) -> npt.NDArray[np.int64 | np.float64]: ...
+def validate_transform4x4(transform: Sequence[Sequence[int]], /, *, must_be_finite: bool = ..., name: str = ...) -> npt.NDArray[np.float64]: ...
 @overload
 def validate_transform4x4(transform: Sequence[Sequence[float]], /, *, must_be_finite: bool = ..., name: str = ...) -> npt.NDArray[np.float64]: ...
 @overload
@@ -1035,7 +1035,8 @@ def validate_transform4x4(
     Returns
     -------
     np.ndarray
-        Validated 4x4 transformation matrix.
+        Validated 4x4 transformation matrix. A 4x4 floating-point array keeps its
+        dtype; any other input is returned as ``float64``.
 
     See Also
     --------
@@ -1080,6 +1081,8 @@ def validate_transform4x4(
         arr4 = np.eye(4)
         arr4[:3, :3] = arr
         return arr4
+    if not np.issubdtype(arr.dtype, np.floating):
+        return arr.astype(np.float64)
     return arr
 
 
