@@ -118,8 +118,7 @@ def check_subdtype(
     Returns
     -------
     object
-        The input, unchanged. Type checkers see an array checked against
-        ``np.integer`` or ``np.floating`` as an array of that kind.
+        The input, unchanged.
 
     Raises
     ------
@@ -193,7 +192,7 @@ def check_real(array: _AnyArrayLikeOrScalar, /, *, name: str = 'Array') -> objec
     Returns
     -------
     array_like
-        The input, unchanged. Type checkers see an array as having a real dtype.
+        The input, unchanged.
 
     Raises
     ------
