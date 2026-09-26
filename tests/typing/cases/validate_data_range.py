@@ -13,10 +13,11 @@ if TYPE_CHECKING:
 
 from pyvista_validation import validate_data_range
 from pyvista_validation._typing import _AnyScalar
+from pyvista_validation._typing import _Array1D
 from pyvista_validation._typing import _Scalar
 
 _DataRangeOut = (
-    npt.NDArray[_Scalar]
+    _Array1D[_Scalar]
     | list[bool]
     | list[int]
     | list[float]
@@ -25,7 +26,7 @@ _DataRangeOut = (
     | tuple[float, float]
 )
 _DataRangeAnyOut = (
-    npt.NDArray[_AnyScalar]
+    _Array1D[_AnyScalar]
     | list[bool]
     | list[int]
     | list[float]
@@ -59,50 +60,50 @@ assert_types(
 )
 assert_types(
     validate_data_range(np.array([0.0, 1.0], dtype=np.float32), to_list=False, to_tuple=False),
-    npt.NDArray[np.float32],
+    _Array1D[np.float32],
 )
 assert_types(
     validate_data_range(np.zeros(2) > 0, must_be_real=False, to_list=False, to_tuple=False),
-    npt.NDArray[np.bool_],
+    _Array1D[np.bool_],
 )
 assert_types(
     validate_data_range([False, True], must_be_real=False, to_list=False, to_tuple=False),
-    npt.NDArray[np.bool_],
+    _Array1D[np.bool_],
 )
-assert_types(validate_data_range([0, 1], to_list=False, to_tuple=False), npt.NDArray[np.int64])
+assert_types(validate_data_range([0, 1], to_list=False, to_tuple=False), _Array1D[np.int64])
 assert_types(
     validate_data_range([0.0, 1.0], to_list=False, to_tuple=False),
-    npt.NDArray[np.float64],
+    _Array1D[np.float64],
 )
 assert_types(
     validate_data_range(['a', 'b'], must_be_real=False, to_list=False, to_tuple=False),
-    npt.NDArray[np.str_],
+    _Array1D[np.str_],
 )
 assert_types(
     validate_data_range([0, 1], dtype_out=np.float32, to_list=False, to_tuple=False),
-    npt.NDArray[np.float32],
+    _Array1D[np.float32],
 )
 assert_types(
     validate_data_range([0, 1], dtype_out=bool, to_list=False, to_tuple=False),
-    npt.NDArray[np.bool_],
+    _Array1D[np.bool_],
 )
 assert_types(
     validate_data_range([0, 1], dtype_out=int, to_list=False, to_tuple=False),
-    npt.NDArray[np.int64],
+    _Array1D[np.int64],
 )
 assert_types(
     validate_data_range([0, 1], dtype_out=float, to_list=False, to_tuple=False),
-    npt.NDArray[np.float64],
+    _Array1D[np.float64],
 )
 assert_types(
     validate_data_range([0, 1], dtype_out='float32', to_list=False, to_tuple=False),
-    npt.NDArray[_Scalar],
+    _Array1D[_Scalar],
 )
 assert_types(
     validate_data_range(
         ['a', 'b'], must_be_real=False, dtype_out='U1', to_list=False, to_tuple=False
     ),
-    npt.NDArray[_AnyScalar],
+    _Array1D[_AnyScalar],
 )
 assert_types(validate_data_range([False, True], must_be_real=False, to_list=True), list[bool])
 assert_types(validate_data_range([0, 1], to_list=True), list[int])
@@ -131,5 +132,5 @@ def float32_range() -> npt.NDArray[np.float32] | Sequence[np.float32]:
 
 
 assert_types(
-    validate_data_range(float32_range(), to_list=False, to_tuple=False), npt.NDArray[np.float32]
+    validate_data_range(float32_range(), to_list=False, to_tuple=False), _Array1D[np.float32]
 )

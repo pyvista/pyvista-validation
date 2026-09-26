@@ -14,6 +14,11 @@ from ._array_like import NumpyArray as NumpyArray
 from ._array_like import _AnyArrayLike as _AnyArrayLike
 from ._array_like import _AnyArrayLikeOrScalar as _AnyArrayLikeOrScalar
 from ._array_like import _AnyScalar as _AnyScalar
+from ._array_like import _AnyScalarT as _AnyScalarT
+from ._array_like import _Array0D as _Array0D
+from ._array_like import _Array1D as _Array1D
+from ._array_like import _Array2D as _Array2D
+from ._array_like import _Array3D as _Array3D
 from ._array_like import _DTypeLike as _DTypeLike
 from ._array_like import _EmptyList as _EmptyList
 from ._array_like import _FiniteNestedList as _FiniteNestedList

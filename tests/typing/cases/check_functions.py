@@ -31,6 +31,10 @@ from pyvista_validation import check_sorted
 from pyvista_validation import check_string
 from pyvista_validation import check_subdtype
 from pyvista_validation import check_type
+from pyvista_validation._typing import _Array0D
+from pyvista_validation._typing import _Array1D
+from pyvista_validation._typing import _Array2D
+from pyvista_validation._typing import _Array3D
 from pyvista_validation._typing import _Floating
 from pyvista_validation._typing import _Integer
 from pyvista_validation._typing import _Real
@@ -38,6 +42,7 @@ from pyvista_validation._typing import _Scalar
 from pyvista_validation.check import _dtype_of
 from pyvista_validation.check import _is_floating
 from pyvista_validation.check import _is_integer
+from pyvista_validation.check import _is_ndim
 from pyvista_validation.check import _is_real
 from pyvista_validation.check import _issubdtype
 from pyvista_validation.check import _Shape
@@ -51,6 +56,7 @@ ONES: npt.NDArray[np.float64] = np.ones(2)
 INTS: npt.NDArray[np.int64] = np.ones(2, dtype=np.int64)
 MATRIX: npt.NDArray[np.int64] = np.array([[0, 1], [2, 3]])
 SCALAR: npt.NDArray[np.float64] = np.array(1.0)
+CUBE: npt.NDArray[np.float64] = np.zeros((2, 2, 2))
 TEXT: npt.NDArray[np.str_] = np.array(['a', 'b'])
 # Arrays whose dtype a type checker cannot see, as np.asarray returns them.
 ANY_FLOATS: npt.NDArray[Any] = np.ones(2)
@@ -60,6 +66,11 @@ ANY_BOOLS: npt.NDArray[Any] = np.ones(2, dtype=bool)
 SCALAR_DTYPES: npt.NDArray[_Scalar] = np.ones(2, dtype=np.uint8)
 F32_OR_TEXT: npt.NDArray[np.float32] | npt.NDArray[np.str_] = np.ones(2, dtype=np.float32)
 I16_OR_TEXT: npt.NDArray[np.int16] | npt.NDArray[np.str_] = np.ones(2, dtype=np.int16)
+
+
+def rank() -> int:
+    """Return a rank no type checker can narrow to a literal."""
+    return 1
 
 
 def unknown() -> object:
@@ -112,6 +123,16 @@ assert_types(check_ndim([1], 1), list[int])
 assert_types(check_ndim([[1]], [1, 2]), list[list[int]])
 assert_types(check_ndim(MATRIX, range(3)), npt.NDArray[np.int64])
 assert_types(check_ndim(['a'], 1), list[str])
+# A literal rank narrows an array's shape type and keeps its dtype.
+assert_types(check_ndim(SCALAR, 0), _Array0D[np.float64])
+assert_types(check_ndim(ONES, 1), _Array1D[np.float64])
+assert_types(check_ndim(MATRIX, 2), _Array2D[np.int64])
+assert_types(check_ndim(CUBE, 3), _Array3D[np.float64])
+assert_types(check_ndim(TEXT, 1), _Array1D[np.str_])
+# An unknown dtype matches every overload, so only the rank predicate narrows it.
+assert_types(check_ndim(ANY_FLOATS, 1), np.ndarray[Any, Any])
+assert_types(check_ndim(ONES, (1, 2)), npt.NDArray[np.float64])
+assert_types(check_ndim(ONES, rank()), npt.NDArray[np.float64])
 assert_types(check_number(1), int)
 assert_types(check_number(1.5), float)
 assert_types(check_number(np.int32(1)), np.int32)
@@ -174,6 +195,14 @@ assert_types(ANY_INTS if _is_real(ANY_INTS) else None, npt.NDArray[_Real] | None
 assert_types(ANY_BOOLS if _is_real(ANY_BOOLS) else None, npt.NDArray[_Real] | None)
 assert_types(F32_OR_TEXT if _is_real(F32_OR_TEXT) else None, npt.NDArray[np.float32] | None)
 assert_types(_is_floating(ONES), bool)
+
+# The rank predicate narrows the array it returns True for, keeping its dtype.
+assert_types(SCALAR if _is_ndim(SCALAR, 0) else None, _Array0D[np.float64] | None)
+assert_types(ONES if _is_ndim(ONES, 1) else None, _Array1D[np.float64] | None)
+assert_types(MATRIX if _is_ndim(MATRIX, 2) else None, _Array2D[np.int64] | None)
+assert_types(CUBE if _is_ndim(CUBE, 3) else None, _Array3D[np.float64] | None)
+assert_types(ANY_FLOATS if _is_ndim(ANY_FLOATS, 1) else None, _Array1D[Any] | None)
+assert_types(_is_ndim(ONES, 1), bool)
 
 SKIP_RUNTIME = {
     'check_real(TEXT)': 'raises TypeError: text is not real, only the passthrough is typed',
