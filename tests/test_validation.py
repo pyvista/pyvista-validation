@@ -53,6 +53,7 @@ from pyvista_validation._cast_array import _cast_to_numpy
 from pyvista_validation._cast_array import _cast_to_tuple
 from pyvista_validation.check import _is_floating
 from pyvista_validation.check import _is_integer
+from pyvista_validation.check import _is_ndim
 from pyvista_validation.check import _is_real
 from pyvista_validation.check import _validate_shape_value
 from pyvista_validation.validate import _array_from_vtkmatrix
@@ -2193,6 +2194,14 @@ def test_dtype_predicates(dtype, floating, integer, real):
     assert _is_floating(array) is floating
     assert _is_integer(array) is integer
     assert _is_real(array) is real
+
+
+@pytest.mark.parametrize('shape', [(), (2,), (2, 2), (2, 2, 2)])
+def test_rank_predicate(shape):
+    """The rank predicate accepts exactly the array's number of dimensions."""
+    array = np.zeros(shape)
+    for ndim in range(4):
+        assert _is_ndim(array, ndim) is (ndim == len(shape))
 
 
 def test_check_finite_rejects_a_single_non_finite_element():

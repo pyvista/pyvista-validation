@@ -70,7 +70,7 @@ _ScalarT = TypeVar('_ScalarT', bound=_Scalar, default=_Scalar)
 NumpyArray = npt.NDArray[_ScalarT]
 
 # Arrays of a known rank, for outputs whose rank the validation guarantees.
-_AnyScalarT = TypeVar('_AnyScalarT', bound=_AnyScalar)
+_AnyScalarT = TypeVar('_AnyScalarT', bound=_AnyScalar, default=_AnyScalar)
 if TYPE_CHECKING:
     _Array0D: TypeAlias = np.ndarray[tuple[()], np.dtype[_AnyScalarT]]
     _Array1D: TypeAlias = np.ndarray[tuple[int], np.dtype[_AnyScalarT]]
