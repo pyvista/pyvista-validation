@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from ._typing import ArrayLike as ArrayLike
-from ._typing import MatrixLike as MatrixLike
-from ._typing import RotationLike as RotationLike
-from ._typing import TransformLike as TransformLike
-from ._typing import VectorLike as VectorLike
+from ._typing import ArrayLike
+from ._typing import MatrixLike
+from ._typing import RotationLike
+from ._typing import TransformLike
+from ._typing import VectorLike
 from ._typing import _Array0D as Array0D
 from ._typing import _Array1D as Array1D
 from ._typing import _Array2D as Array2D
