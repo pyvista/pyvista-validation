@@ -69,6 +69,16 @@ else:
 _ScalarT = TypeVar('_ScalarT', bound=_Scalar, default=_Scalar)
 NumpyArray = npt.NDArray[_ScalarT]
 
+# Arrays of a known rank, for outputs whose rank the validation guarantees.
+_AnyScalarT = TypeVar('_AnyScalarT', bound=_AnyScalar)
+if TYPE_CHECKING:
+    _Array0D: TypeAlias = np.ndarray[tuple[()], np.dtype[_AnyScalarT]]
+    _Array1D: TypeAlias = np.ndarray[tuple[int], np.dtype[_AnyScalarT]]
+    _Array2D: TypeAlias = np.ndarray[tuple[int, int], np.dtype[_AnyScalarT]]
+    _Array3D: TypeAlias = np.ndarray[tuple[int, int, int], np.dtype[_AnyScalarT]]
+else:
+    _Array0D = _Array1D = _Array2D = _Array3D = npt.NDArray[_AnyScalarT]
+
 # The Python scalar type of a sequence's items. Its default makes a bare ``ArrayLike`` mean
 # ``ArrayLike[float]``, which accepts ints and bools as well through numeric promotion.
 NumberType = TypeVar('NumberType', bound=float, default=float)

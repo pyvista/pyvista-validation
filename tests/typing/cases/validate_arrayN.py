@@ -14,11 +14,12 @@ if TYPE_CHECKING:
 from pyvista_validation import validate_arrayN
 from pyvista_validation import validate_arrayN_unsigned
 from pyvista_validation._typing import _AnyScalar
+from pyvista_validation._typing import _Array1D
 from pyvista_validation._typing import _Integer
 from pyvista_validation._typing import _Scalar
 
 _ArrayNOut = (
-    npt.NDArray[_Scalar]
+    _Array1D[_Scalar]
     | list[bool]
     | list[int]
     | list[float]
@@ -26,9 +27,9 @@ _ArrayNOut = (
     | tuple[int, ...]
     | tuple[float, ...]
 )
-_ArrayNUnsignedOut = npt.NDArray[_Integer] | list[int] | tuple[int, ...]
+_ArrayNUnsignedOut = _Array1D[_Integer] | list[int] | tuple[int, ...]
 _ArrayNAnyOut = (
-    npt.NDArray[_AnyScalar]
+    _Array1D[_AnyScalar]
     | list[bool]
     | list[int]
     | list[float]
@@ -45,21 +46,21 @@ def flag() -> bool:
     return False
 
 
-assert_types(validate_arrayN(np.zeros(3, dtype=np.float32)), npt.NDArray[np.float32])
-assert_types(validate_arrayN([]), npt.NDArray[np.float64])
-assert_types(validate_arrayN(np.zeros(3) > 0, must_be_real=False), npt.NDArray[np.bool_])
-assert_types(validate_arrayN([True, False], must_be_real=False), npt.NDArray[np.bool_])
-assert_types(validate_arrayN([1, 2]), npt.NDArray[np.int64])
-assert_types(validate_arrayN([1.5, 2.5]), npt.NDArray[np.float64])
-assert_types(validate_arrayN(['a', 'b'], must_be_real=False), npt.NDArray[np.str_])
-assert_types(validate_arrayN([1, 2], dtype_out=np.float32), npt.NDArray[np.float32])
-assert_types(validate_arrayN([1, 2], dtype_out=bool), npt.NDArray[np.bool_])
-assert_types(validate_arrayN([1, 2], dtype_out=int), npt.NDArray[np.int64])
-assert_types(validate_arrayN([1, 2], dtype_out=float), npt.NDArray[np.float64])
-assert_types(validate_arrayN([1, 2], dtype_out='float32'), npt.NDArray[_Scalar])
+assert_types(validate_arrayN(np.zeros(3, dtype=np.float32)), _Array1D[np.float32])
+assert_types(validate_arrayN([]), _Array1D[np.float64])
+assert_types(validate_arrayN(np.zeros(3) > 0, must_be_real=False), _Array1D[np.bool_])
+assert_types(validate_arrayN([True, False], must_be_real=False), _Array1D[np.bool_])
+assert_types(validate_arrayN([1, 2]), _Array1D[np.int64])
+assert_types(validate_arrayN([1.5, 2.5]), _Array1D[np.float64])
+assert_types(validate_arrayN(['a', 'b'], must_be_real=False), _Array1D[np.str_])
+assert_types(validate_arrayN([1, 2], dtype_out=np.float32), _Array1D[np.float32])
+assert_types(validate_arrayN([1, 2], dtype_out=bool), _Array1D[np.bool_])
+assert_types(validate_arrayN([1, 2], dtype_out=int), _Array1D[np.int64])
+assert_types(validate_arrayN([1, 2], dtype_out=float), _Array1D[np.float64])
+assert_types(validate_arrayN([1, 2], dtype_out='float32'), _Array1D[_Scalar])
 assert_types(
     validate_arrayN(['a', 'b'], must_be_real=False, dtype_out='U1'),
-    npt.NDArray[_AnyScalar],
+    _Array1D[_AnyScalar],
 )
 assert_types(validate_arrayN([], to_list=True), list[float])
 assert_types(validate_arrayN([True, False], must_be_real=False, to_list=True), list[bool])
@@ -95,18 +96,18 @@ assert_types(
 )
 assert_types(validate_arrayN([1, 2], to_list=flag()), _ArrayNOut)
 assert_types(validate_arrayN(['a', 'b'], must_be_real=False, to_list=flag()), _ArrayNAnyOut)
-assert_types(validate_arrayN(1), npt.NDArray[np.int64])
-assert_types(validate_arrayN([[1, 2]]), npt.NDArray[np.int64])
-assert_types(validate_arrayN(np.float32(1.5)), npt.NDArray[np.float32])
-assert_types(validate_arrayN([1, 2], reshape=False), npt.NDArray[np.int64])
-assert_types(validate_arrayN_unsigned([1, 2]), npt.NDArray[np.int64])
-assert_types(validate_arrayN_unsigned([1, 2], dtype_out=np.uint8), npt.NDArray[np.uint8])
-assert_types(validate_arrayN_unsigned([1, 2], dtype_out='int32'), npt.NDArray[_Integer])
+assert_types(validate_arrayN(1), _Array1D[np.int64])
+assert_types(validate_arrayN([[1, 2]]), _Array1D[np.int64])
+assert_types(validate_arrayN(np.float32(1.5)), _Array1D[np.float32])
+assert_types(validate_arrayN([1, 2], reshape=False), _Array1D[np.int64])
+assert_types(validate_arrayN_unsigned([1, 2]), _Array1D[np.int64])
+assert_types(validate_arrayN_unsigned([1, 2], dtype_out=np.uint8), _Array1D[np.uint8])
+assert_types(validate_arrayN_unsigned([1, 2], dtype_out='int32'), _Array1D[_Integer])
 assert_types(validate_arrayN_unsigned([1, 2], to_list=True), list[int])
 assert_types(validate_arrayN_unsigned([1, 2], to_tuple=True), tuple[int, ...])
 assert_types(validate_arrayN_unsigned([1, 2], to_list=flag()), _ArrayNUnsignedOut)
-assert_types(validate_arrayN_unsigned(np.array([1, 2], dtype=np.uint16)), npt.NDArray[np.int64])
-assert_types(validate_arrayN_unsigned([1.0, 2.0], reshape=False), npt.NDArray[np.int64])
+assert_types(validate_arrayN_unsigned(np.array([1, 2], dtype=np.uint16)), _Array1D[np.int64])
+assert_types(validate_arrayN_unsigned([1.0, 2.0], reshape=False), _Array1D[np.int64])
 
 
 def int16_vector() -> npt.NDArray[np.int16] | Sequence[np.int16]:
@@ -114,4 +115,4 @@ def int16_vector() -> npt.NDArray[np.int16] | Sequence[np.int16]:
     return np.ones(3, dtype=np.int16)
 
 
-assert_types(validate_arrayN(int16_vector()), npt.NDArray[np.int16])
+assert_types(validate_arrayN(int16_vector()), _Array1D[np.int16])
