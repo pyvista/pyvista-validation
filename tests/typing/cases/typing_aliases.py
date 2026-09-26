@@ -12,6 +12,8 @@ from pyvista_validation._typing import NumpyArray
 from pyvista_validation._typing import VectorLike
 from pyvista_validation._typing import _ArrayLikeOrScalar
 from pyvista_validation._typing import _Scalar
+from pyvista_validation.typing import Array1D
+from pyvista_validation.typing import Array2D
 
 
 def vector(value: VectorLike) -> VectorLike:
@@ -54,6 +56,16 @@ def any_array(value: NumpyArray) -> NumpyArray:
     return value
 
 
+def vector_array(value: Array1D[np.float64]) -> Array1D[np.float64]:
+    """Pass a 1-D float64 array through."""
+    return value
+
+
+def matrix_array(value: Array2D[np.int32]) -> Array2D[np.int32]:
+    """Pass a 2-D int32 array through."""
+    return value
+
+
 # A bare alias keeps its type variable at runtime, so the cases compare against the
 # subscripted spelling; the functions annotated bare prove the default statically.
 assert_types(vector([1.0]), VectorLike[float])
@@ -66,3 +78,5 @@ assert_types(same([1]), ArrayLike[int])
 assert_types(same([1.5]), ArrayLike[float])
 assert_types(same(np.zeros(2)), ArrayLike[float])
 assert_types(any_array(np.zeros(2, dtype=np.int8)), NumpyArray[_Scalar])
+assert_types(vector_array(np.zeros(2)), Array1D[np.float64])
+assert_types(matrix_array(np.zeros((2, 2), dtype=np.int32)), Array2D[np.int32])
