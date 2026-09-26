@@ -39,11 +39,15 @@ else:
 
 if TYPE_CHECKING:
     import numpy.typing as npt
+    from typing_extensions import TypeIs
 
     from pyvista_validation._typing import VectorLike
     from pyvista_validation._typing import _AnyArrayLikeOrScalar
     from pyvista_validation._typing import _ArrayLikeOrScalar
     from pyvista_validation._typing import _DTypeLike
+    from pyvista_validation._typing import _Floating
+    from pyvista_validation._typing import _Integer
+    from pyvista_validation._typing import _Real
     from pyvista_validation._typing import _Scalar
 
 
@@ -1436,6 +1440,21 @@ def _dtype_of(obj: _DTypeLike | _AnyArrayLikeOrScalar, /) -> np.dtype[np.generic
 def _issubdtype(dtype: np.dtype[np.generic[object]], base: _DTypeLike, /) -> bool:
     """Wrap ``np.issubdtype``, whose parameters are typed as ``Any``."""
     return np.issubdtype(dtype, base)
+
+
+def _is_floating(array: npt.NDArray[np.generic[object]], /) -> TypeIs[npt.NDArray[_Floating]]:
+    """Return whether an array has a float64, float32 or float16 dtype."""
+    return array.dtype.type in (np.float64, np.float32, np.float16)
+
+
+def _is_integer(array: npt.NDArray[np.generic[object]], /) -> TypeIs[npt.NDArray[_Integer]]:
+    """Return whether an array has a signed or unsigned integer dtype."""
+    return array.dtype.kind in 'iu'
+
+
+def _is_real(array: npt.NDArray[np.generic[object]], /) -> TypeIs[npt.NDArray[_Real]]:
+    """Return whether an array has an integer, float64, float32 or float16 dtype."""
+    return _is_integer(array) or _is_floating(array)
 
 
 def _shape_of(array: _AnyArrayLikeOrScalar, /) -> tuple[int, ...]:

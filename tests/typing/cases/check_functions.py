@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from collections.abc import Sequence
 import numbers
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -30,8 +31,14 @@ from pyvista_validation import check_sorted
 from pyvista_validation import check_string
 from pyvista_validation import check_subdtype
 from pyvista_validation import check_type
+from pyvista_validation._typing import _Floating
+from pyvista_validation._typing import _Integer
+from pyvista_validation._typing import _Real
 from pyvista_validation._typing import _Scalar
 from pyvista_validation.check import _dtype_of
+from pyvista_validation.check import _is_floating
+from pyvista_validation.check import _is_integer
+from pyvista_validation.check import _is_real
 from pyvista_validation.check import _issubdtype
 from pyvista_validation.check import _Shape
 from pyvista_validation.check import _shape_of
@@ -45,6 +52,14 @@ INTS: npt.NDArray[np.int64] = np.ones(2, dtype=np.int64)
 MATRIX: npt.NDArray[np.int64] = np.array([[0, 1], [2, 3]])
 SCALAR: npt.NDArray[np.float64] = np.array(1.0)
 TEXT: npt.NDArray[np.str_] = np.array(['a', 'b'])
+# Arrays whose dtype a type checker cannot see, as np.asarray returns them.
+ANY_FLOATS: npt.NDArray[Any] = np.ones(2)
+ANY_INTS: npt.NDArray[Any] = np.ones(2, dtype=np.int32)
+ANY_BOOLS: npt.NDArray[Any] = np.ones(2, dtype=bool)
+# Arrays typed with a union of dtypes.
+SCALAR_DTYPES: npt.NDArray[_Scalar] = np.ones(2, dtype=np.uint8)
+F32_OR_TEXT: npt.NDArray[np.float32] | npt.NDArray[np.str_] = np.ones(2, dtype=np.float32)
+I16_OR_TEXT: npt.NDArray[np.int16] | npt.NDArray[np.str_] = np.ones(2, dtype=np.int16)
 
 
 def unknown() -> object:
@@ -147,6 +162,18 @@ assert_types(_shape_of([1, 2]), tuple[int, ...])
 assert_types(_shape_of(['a', 'b']), tuple[int, ...])
 assert_types(_issubdtype(np.dtype('f8'), np.floating), bool)
 assert_types(_union_members(int | float), tuple[type[object], ...])
+
+# The dtype predicates narrow the array they return True for, keeping a dtype it already has.
+assert_types(ANY_FLOATS if _is_floating(ANY_FLOATS) else None, npt.NDArray[_Floating] | None)
+assert_types(ANY_INTS if _is_floating(ANY_INTS) else None, npt.NDArray[_Floating] | None)
+assert_types(F32_OR_TEXT if _is_floating(F32_OR_TEXT) else None, npt.NDArray[np.float32] | None)
+assert_types(ANY_INTS if _is_integer(ANY_INTS) else None, npt.NDArray[_Integer] | None)
+assert_types(SCALAR_DTYPES if _is_integer(SCALAR_DTYPES) else None, npt.NDArray[_Integer] | None)
+assert_types(I16_OR_TEXT if _is_integer(I16_OR_TEXT) else None, npt.NDArray[np.int16] | None)
+assert_types(ANY_INTS if _is_real(ANY_INTS) else None, npt.NDArray[_Real] | None)
+assert_types(ANY_BOOLS if _is_real(ANY_BOOLS) else None, npt.NDArray[_Real] | None)
+assert_types(F32_OR_TEXT if _is_real(F32_OR_TEXT) else None, npt.NDArray[np.float32] | None)
+assert_types(_is_floating(ONES), bool)
 
 SKIP_RUNTIME = {
     'check_real(TEXT)': 'raises TypeError: text is not real, only the passthrough is typed',

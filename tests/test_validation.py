@@ -51,6 +51,9 @@ from pyvista_validation import validate_transform4x4
 from pyvista_validation._cast_array import _cast_to_list
 from pyvista_validation._cast_array import _cast_to_numpy
 from pyvista_validation._cast_array import _cast_to_tuple
+from pyvista_validation.check import _is_floating
+from pyvista_validation.check import _is_integer
+from pyvista_validation.check import _is_real
 from pyvista_validation.check import _validate_shape_value
 from pyvista_validation.validate import _array_from_vtkmatrix
 from pyvista_validation.validate import _set_default_kwarg_mandatory
@@ -2153,6 +2156,32 @@ def test_check_subdtype_accepts_dtype_names_and_objects():
 def test_check_real_accepts_every_integer_and_floating_dtype(dtype):
     array = np.zeros(2, dtype=dtype)
     assert check_real(array) is array
+
+
+@pytest.mark.parametrize(
+    ('dtype', 'floating', 'integer', 'real'),
+    [
+        (np.float64, True, False, True),
+        (np.float32, True, False, True),
+        (np.float16, True, False, True),
+        (np.longdouble, False, False, False),
+        (np.int8, False, True, True),
+        (np.uint64, False, True, True),
+        (np.longlong, False, True, True),
+        (np.bool_, False, False, False),
+        (np.complex64, False, False, False),
+        (np.complex128, False, False, False),
+        ('m8[s]', False, False, False),
+        (np.str_, False, False, False),
+        (object, False, False, False),
+    ],
+)
+def test_dtype_predicates(dtype, floating, integer, real):
+    """Each dtype predicate accepts exactly the dtypes of the type it narrows to."""
+    array = np.zeros(2, dtype=dtype)
+    assert _is_floating(array) is floating
+    assert _is_integer(array) is integer
+    assert _is_real(array) is real
 
 
 def test_check_finite_rejects_a_single_non_finite_element():
