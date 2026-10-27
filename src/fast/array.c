@@ -235,7 +235,7 @@ static PyArray_Descr *dtype_of(PyObject *obj)
 {
     if (PyArray_Check(obj)) {
         PyArray_Descr *descr = PyArray_DESCR((PyArrayObject *)obj);
-        Py_INCREF(descr);
+        Py_INCREF((PyObject *)descr);
         return descr;
     }
     PyArray_Descr *descr = NULL;
@@ -249,7 +249,7 @@ static PyArray_Descr *dtype_of(PyObject *obj)
         return NULL;
     }
     descr = PyArray_DESCR((PyArrayObject *)array);
-    Py_INCREF(descr);
+    Py_INCREF((PyObject *)descr);
     Py_DECREF(array);
     return descr;
 }
@@ -276,13 +276,13 @@ static PyObject *broadcast_view(PyArrayObject *array, npy_intp *dims, int nd)
         }
     }
     PyArray_Descr *descr = PyArray_DESCR(array);
-    Py_INCREF(descr);
+    Py_INCREF((PyObject *)descr);
     PyObject *view = PyArray_NewFromDescr(&PyArray_Type, descr, nd, dims, strides,
                                           PyArray_DATA(array), 0, NULL);
     if (view == NULL) {
         return NULL;
     }
-    Py_INCREF(array);
+    Py_INCREF((PyObject *)array);
     if (PyArray_SetBaseObject((PyArrayObject *)view, (PyObject *)array) < 0) {
         Py_DECREF(view);
         return NULL;
@@ -308,7 +308,7 @@ static int subdtype(PyArray_Descr *descr, PyObject *base)
         cls = (PyObject *)base_descr->typeobj;
     }
     int result = PyObject_IsSubclass((PyObject *)descr->typeobj, cls);
-    Py_XDECREF(base_descr);
+    Py_XDECREF((PyObject *)base_descr);
     if (result < 0) {
         PyErr_Clear();
         return -1;

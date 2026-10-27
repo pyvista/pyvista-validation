@@ -1,16 +1,15 @@
 version: 2
+multi-ecosystem-groups:
+  maintenance:
+    schedule:
+      interval: quarterly
+    labels: [maintenance, dependencies]
 updates:
 - package-ecosystem: pip
   directory: /
-  schedule:
-    interval: weekly
-  labels: [maintenance, dependencies]
-  open-pull-requests-limit: 20
+  patterns: ['*']
+  multi-ecosystem-group: maintenance
 - package-ecosystem: github-actions
-  directory: /.github/workflows
-  schedule:
-    interval: weekly
-  labels: [maintenance, dependencies]
-  groups:
-    artifacts:
-      patterns: [actions/upload-artifact, actions/download-artifact]
+  directory: /
+  patterns: ['*']
+  multi-ecosystem-group: maintenance

@@ -14,11 +14,9 @@ import numpy.typing as npt
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar
-    from typing import Unpack
 else:
     # Type variable defaults (PEP 696) reached the standard library in 3.13.
     from typing_extensions import TypeVar
-    from typing_extensions import Unpack
 
 # Every NumPy scalar type this package produces or preserves.
 _Scalar = (
@@ -45,7 +43,7 @@ _AnyScalar = _Scalar | _Text
 
 # Anything np.dtype() accepts for numeric data: a scalar type, a dtype, or a dtype name.
 if TYPE_CHECKING:
-    from typing_extensions import Never
+    from typing import Never
 
     # Empty list literals, which NumPy turns into float64 arrays; only a type checker
     # can tell them apart from other lists, so the runtime value is a placeholder.
@@ -69,7 +67,7 @@ _Array1D = np.ndarray[tuple[int], np.dtype[_AnyScalarT]]
 _Array2D = np.ndarray[tuple[int, int], np.dtype[_AnyScalarT]]
 _Array3D = np.ndarray[tuple[int, int, int], np.dtype[_AnyScalarT]]
 # Arrays of at least one dimension, so a known 0-D array is excluded.
-_ArrayAtLeast1D = np.ndarray[tuple[int, Unpack[tuple[int, ...]]], np.dtype[_AnyScalarT]]
+_ArrayAtLeast1D = np.ndarray[tuple[int, *tuple[int, ...]], np.dtype[_AnyScalarT]]
 
 _NestedBool = (
     Sequence[bool]

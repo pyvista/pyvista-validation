@@ -40,6 +40,7 @@ else:
 
 if TYPE_CHECKING:
     from typing import Literal
+    from typing import Never
 
     import numpy.typing as npt
     from typing_extensions import TypeIs
@@ -58,8 +59,11 @@ if TYPE_CHECKING:
     from pyvista_validation._typing import _DTypeLike
     from pyvista_validation._typing import _Floating
     from pyvista_validation._typing import _Integer
+    from pyvista_validation._typing import _NestedBool
+    from pyvista_validation._typing import _NestedStr
     from pyvista_validation._typing import _Real
     from pyvista_validation._typing import _Scalar
+    from pyvista_validation._typing import _Text
 
 
 _Shape = tuple[()] | tuple[int, ...]
@@ -177,6 +181,12 @@ def _check_subdtype(
         raise TypeError(msg)
 
 
+# fmt: off
+@overload
+def check_real(array: npt.NDArray[_Text | np.bool_] | _Text | np.bool_ | str | bool | _NestedStr | _NestedBool, /, *, name: str = ...) -> Never: ...
+@overload
+def check_real(array: _AnyArrayT, /, *, name: str = ...) -> _AnyArrayT: ...
+# fmt: on
 def check_real(array: _AnyArrayT, /, *, name: str = 'Array') -> _AnyArrayT:
     """Check if an array has real numbers (float or integer type).
 

@@ -3,7 +3,7 @@ build-backend = 'setuptools.build_meta'
 requires = ['numpy>=2.0', 'setuptools>=64', 'setuptools_scm>=8']
 
 [dependency-groups]
-coverage = ['coverage[toml]==7.16.1', 'diff-cover==10.6.0']
+coverage = ['coverage[toml]==7.16.2', 'diff-cover==10.6.0']
 dev = [
   'lxml',
   'mypy',
@@ -11,7 +11,7 @@ dev = [
   'pytest',
   'pytest-cov',
   'scipy-stubs',
-  'type-assert==0.3.0',
+  'type-assert==0.6.0',
 ]
 docs = [
   'numpydoc==1.11.0',
@@ -31,11 +31,11 @@ classifiers = [
   'Operating System :: Microsoft :: Windows',
   'Operating System :: POSIX :: Linux',
   'Programming Language :: Python :: 3',
-  'Programming Language :: Python :: 3.10',
   'Programming Language :: Python :: 3.11',
   'Programming Language :: Python :: 3.12',
   'Programming Language :: Python :: 3.13',
   'Programming Language :: Python :: 3.14',
+  'Programming Language :: Python :: 3.15',
   'Topic :: Scientific/Engineering',
   'Topic :: Software Development :: Libraries :: Python Modules',
   'Typing :: Typed',
@@ -50,7 +50,7 @@ keywords = ['array', 'numpy', 'validation']
 license = 'MIT'
 name = 'pyvista-validation'
 readme = 'README.md'
-requires-python = '>=3.10'
+requires-python = '>=3.11'
 
 [project.optional-dependencies]
 # `vtk` and `scipy` are only needed to validate their respective object types;
@@ -63,13 +63,9 @@ vtk = ['vtk']
 Documentation = 'https://validation.pyvista.org/'
 Homepage = 'https://github.com/pyvista/pyvista-validation'
 
-[tool.uv.dependency-groups]
-# The pinned Sphinx needs a newer Python than the package itself supports.
-docs = { requires-python = '>=3.11' }
-
 [tool.cibuildwheel]
 # One stable-ABI wheel per platform; the test matrix covers the other Pythons.
-build = 'cp310-*'
+build = 'cp311-*'
 build-verbosity = 1
 test-command = 'python -c "from pyvista_validation import _accelerate; assert _accelerate.enabled" && pytest {project}/tests --ignore={project}/tests/typing --no-cov -q'
 test-requires = ['pytest', 'pytest-cov']
@@ -94,8 +90,11 @@ warn_unreachable = true
 
 [tool.pytest.ini_options]
 addopts = '--cov=pyvista_validation --cov-fail-under=95'
+filterwarnings = ['error']
 testpaths = 'tests'
-type_assert_cases = 'tests/typing/cases'
+
+[tool.type-assert]
+cases = 'tests/typing/cases'
 
 [tool.ruff]
 indent-width = 4

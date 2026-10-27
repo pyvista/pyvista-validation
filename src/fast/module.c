@@ -249,7 +249,7 @@ static PyObject *fast_wrap(PyObject *module, PyObject *const *args, Py_ssize_t n
     Context *context = (Context *)PyType_GenericAlloc(ContextType, 0);
     if (text == NULL || copied_name == NULL || def == NULL || context == NULL) {
         Py_DECREF(doc);
-        Py_XDECREF(context);
+        Py_XDECREF((PyObject *)context);
         free(text);
         free(copied_name);
         free(def);
