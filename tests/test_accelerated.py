@@ -12,6 +12,7 @@ from types import SimpleNamespace
 from typing import Optional
 from typing import Union
 from unittest import mock
+import warnings
 
 import numpy as np
 import pytest
@@ -83,11 +84,14 @@ def pure():
 
 
 def outcome(function, *args, **kwargs):
-    """Return what a call returns, or which error it raises."""
-    try:
-        return ('returned', function(*args, **kwargs))
-    except Exception as error:  # noqa: BLE001
-        return ('raised', type(error), str(error))
+    """Return what a call returns or which error it raises, and the warnings it emits."""
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        try:
+            result = ('returned', function(*args, **kwargs))
+        except Exception as error:  # noqa: BLE001
+            result = ('raised', type(error), str(error))
+    return (*result, [(w.category, str(w.message)) for w in caught])
 
 
 def equal(a, b):
@@ -134,6 +138,7 @@ def compare(actual, expected):
     else:
         assert actual[0] == 'returned', actual
         assert equal(actual[1], expected[1]), (actual[1], expected[1])
+        assert actual[2] == expected[2]
 
 
 def sample_arrays():
