@@ -221,10 +221,3 @@ assert_types(
     _Array1D[np.float32] | _Array1D[np.str_] | None,
 )
 assert_types(_is_ndim(ONES, 1), bool)
-
-SKIP_RUNTIME = {
-    'check_real(TEXT)': 'raises TypeError: text is not real',
-    'check_real(np.ones(2, dtype=bool))': 'raises TypeError: booleans are not real',
-    "check_real(['a'])": 'raises TypeError: text is not real',
-    'check_real(True)': 'raises TypeError: booleans are not real',
-}
