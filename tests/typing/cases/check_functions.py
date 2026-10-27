@@ -10,6 +10,7 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 from type_assert import assert_types
+from typing_extensions import Never
 
 from pyvista_validation import check_contains
 from pyvista_validation import check_finite
@@ -99,7 +100,10 @@ assert_types(check_subdtype([1, 2], np.integer), list[int])
 assert_types(check_real([1.0]), list[float])
 assert_types(check_real(ONES), npt.NDArray[np.float64])
 assert_types(check_real(1), int)
-assert_types(check_real(TEXT), npt.NDArray[np.str_])
+assert_types(check_real(TEXT), Never)
+assert_types(check_real(np.ones(2, dtype=bool)), Never)
+assert_types(check_real(['a']), Never)
+assert_types(check_real(True), Never)
 assert_types(check_sorted([1, 2]), list[int])
 assert_types(check_sorted(MATRIX, axis=None), npt.NDArray[np.int64])
 assert_types(check_sorted(MATRIX, axis=0), npt.NDArray[np.int64])
@@ -219,5 +223,8 @@ assert_types(
 assert_types(_is_ndim(ONES, 1), bool)
 
 SKIP_RUNTIME = {
-    'check_real(TEXT)': 'raises TypeError: text is not real, only the passthrough is typed',
+    'check_real(TEXT)': 'raises TypeError: text is not real',
+    'check_real(np.ones(2, dtype=bool))': 'raises TypeError: booleans are not real',
+    "check_real(['a'])": 'raises TypeError: text is not real',
+    'check_real(True)': 'raises TypeError: booleans are not real',
 }
