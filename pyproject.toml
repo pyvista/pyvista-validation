@@ -11,7 +11,7 @@ dev = [
   'pytest',
   'pytest-cov',
   'scipy-stubs',
-  'type-assert==0.5.0',
+  'type-assert==0.6.0; python_version >= "3.11"',
 ]
 docs = [
   'numpydoc==1.11.0',
@@ -94,12 +94,11 @@ warn_unreachable = true
 
 [tool.pytest.ini_options]
 addopts = '--cov=pyvista_validation --cov-fail-under=95'
-filterwarnings = [
-  'error',
-  'ignore:Unknown config option. type_assert_cases:pytest.PytestConfigWarning',
-] # the wheel tests run without type-assert
+filterwarnings = ['error']
 testpaths = 'tests'
-type_assert_cases = 'tests/typing/cases'
+
+[tool.type-assert]
+cases = 'tests/typing/cases'
 
 [tool.ruff]
 indent-width = 4
