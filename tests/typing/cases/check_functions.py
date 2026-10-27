@@ -6,11 +6,11 @@ from collections.abc import Iterable
 from collections.abc import Sequence
 import numbers
 from typing import Any
+from typing import Never
 
 import numpy as np
 import numpy.typing as npt
 from type_assert import assert_types
-from typing_extensions import Never
 
 from pyvista_validation import check_contains
 from pyvista_validation import check_finite
