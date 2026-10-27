@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+        python-version: ['3.11', '3.12', '3.13', '3.14']
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
       with:
@@ -126,7 +126,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.10', '3.14']
+        python-version: ['3.11', '3.15']
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
       with:
@@ -239,13 +239,13 @@ jobs:
       with:
         enable-cache: false
     - name: Run the suite against the wheel on the newest Python
-        # cibuildwheel builds and tests the wheel on 3.10; the point of the stable ABI is that
+        # cibuildwheel builds and tests the wheel on 3.11; the point of the stable ABI is that
         # the same file serves every later version, which nothing else here exercises. It runs
         # outside the checkout, whose source tree would otherwise shadow the installed wheel.
       if: runner.os == 'Linux'
       working-directory: ${{ runner.temp }}
       run: |
-        uv venv --python 3.14 abi3
+        uv venv --python 3.15 abi3
         uv pip install --python abi3/bin/python pytest pytest-cov "$GITHUB_WORKSPACE"/wheelhouse/*manylinux*.whl
         abi3/bin/python -c "from pyvista_validation import _accelerate; assert _accelerate.enabled"
         abi3/bin/python -m pytest "$GITHUB_WORKSPACE/tests" --ignore="$GITHUB_WORKSPACE/tests/typing" --no-cov -q

@@ -52,10 +52,10 @@ else:
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from typing import Any
+    from typing import Never
     from typing import TypeAlias
 
     import numpy.typing as npt
-    from typing_extensions import Never
     from typing_extensions import Unpack
 
     from pyvista_validation._cast_array import _AnyScalarInT

@@ -5,9 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 import re
 import sys
-import xml.etree.ElementTree as ET
-
 import tomllib
+import xml.etree.ElementTree as ET
 
 
 def _code(line: str) -> str:
