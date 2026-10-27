@@ -71,6 +71,11 @@ static PyObject *array_core(PyObject *const *a)
         PyErr_Clear();
         RETURN_FALLBACK;
     }
+    must_be_real = must_be_real && !SKIPPED(CHECK_REAL);
+    nonnegative = nonnegative && !SKIPPED(CHECK_NONNEGATIVE);
+    finite = finite && !SKIPPED(CHECK_FINITE);
+    integer = integer && !SKIPPED(CHECK_INTEGER);
+    sorted_ = sorted_ && !SKIPPED(CHECK_SORTED);
 
     PyObject *out = as_array(a[A_ARR], as_any, copy);
     if (out == FALLBACK) {
@@ -86,13 +91,13 @@ static PyObject *array_core(PyObject *const *a)
     if (must_be_real && !is_real_type(PyArray_TYPE(array))) {
         DECLINE;
     }
-    if (GIVEN(a[A_DTYPE]) && subdtype_ok(PyArray_DESCR(array), a[A_DTYPE]) != 1) {
+    if (GIVEN(a[A_DTYPE]) && !SKIPPED(CHECK_SUBDTYPE) && subdtype_ok(PyArray_DESCR(array), a[A_DTYPE]) != 1) {
         DECLINE;
     }
-    if (GIVEN(a[A_SHAPE]) && shape_ok(array, a[A_SHAPE]) != 1) {
+    if (GIVEN(a[A_SHAPE]) && !SKIPPED(CHECK_SHAPE) && shape_ok(array, a[A_SHAPE]) != 1) {
         DECLINE;
     }
-    if (GIVEN(a[A_NDIM]) && number_in(PyArray_NDIM(array), a[A_NDIM], 0) != 1) {
+    if (GIVEN(a[A_NDIM]) && !SKIPPED(CHECK_NDIM) && number_in(PyArray_NDIM(array), a[A_NDIM], 0) != 1) {
         DECLINE;
     }
 
@@ -149,6 +154,7 @@ static PyObject *array_core(PyObject *const *a)
 
     /* The length is that of the reshaped and broadcast array */
     if ((GIVEN(a[A_LENGTH]) || GIVEN(a[A_MIN_LENGTH]) || GIVEN(a[A_MAX_LENGTH])) &&
+        !SKIPPED(CHECK_LENGTH) &&
         length_ok(array, GIVEN(a[A_LENGTH]) ? a[A_LENGTH] : NULL,
                   GIVEN(a[A_MIN_LENGTH]) ? a[A_MIN_LENGTH] : NULL,
                   GIVEN(a[A_MAX_LENGTH]) ? a[A_MAX_LENGTH] : NULL) != 1) {
@@ -157,7 +163,7 @@ static PyObject *array_core(PyObject *const *a)
 
     /* The element-wise checks, one pass */
     values_spec spec = {nonnegative, finite, integer, 0, 0};
-    if (GIVEN(a[A_RANGE])) {
+    if (GIVEN(a[A_RANGE]) && !SKIPPED(CHECK_RANGE)) {
         int strict_low = truth(a[A_STRICT_LOWER], 0), strict_high = truth(a[A_STRICT_UPPER], 0);
         if (strict_low < 0 || strict_high < 0 || !range_bounds(a[A_RANGE], &spec.low, &spec.high)) {
             PyErr_Clear();
@@ -877,7 +883,7 @@ static PyObject *fast_validate_axes(PyObject *const *args, Py_ssize_t nargs, PyO
             int zero_third = isclose(third[0], 0) && isclose(third[1], 0) && isclose(third[2], 0);
             int zero_first = isclose(vectors[0], 0) && isclose(vectors[1], 0) && isclose(vectors[2], 0);
             int zero_second = isclose(vectors[3], 0) && isclose(vectors[4], 0) && isclose(vectors[5], 0);
-            if (zero_third && !zero_first && !zero_second) {
+            if (!SKIPPED(CHECK_AXES) && zero_third && !zero_first && !zero_second) {
                 Py_DECREF(axes_array);
                 RETURN_FALLBACK;
             }
@@ -892,14 +898,16 @@ static PyObject *fast_validate_axes(PyObject *const *args, Py_ssize_t nargs, PyO
 
     values_spec finite = {0, 1, 0, 0, 0};
     double m[9];
-    if (values_ok((PyArrayObject *)axes_array, &finite) != 1 || !read_doubles(axes_array, m, 9)) {
+    if ((!SKIPPED(CHECK_FINITE) && values_ok((PyArrayObject *)axes_array, &finite) != 1) ||
+        !read_doubles(axes_array, m, 9)) {
         Py_DECREF(axes_array);
         RETURN_FALLBACK;
     }
     double norms[3], n[9];
     for (int i = 0; i < 3; i++) {
         const double *row = m + 3 * i;
-        if (isclose(row[0], 0) && isclose(row[1], 0) && isclose(row[2], 0)) {
+        if (!SKIPPED(CHECK_AXES) && isclose(row[0], 0) && isclose(row[1], 0) &&
+            isclose(row[2], 0)) {
             Py_DECREF(axes_array);
             RETURN_FALLBACK;
         }
@@ -909,8 +917,8 @@ static PyObject *fast_validate_axes(PyObject *const *args, Py_ssize_t nargs, PyO
         }
     }
     const double *n0 = n, *n1 = n + 3, *n2 = n + 6;
-    if (isclose(fabs(dot3(n0, n1)), 1) || isclose(fabs(dot3(n0, n2)), 1) ||
-        isclose(fabs(dot3(n1, n2)), 1)) {
+    if (!SKIPPED(CHECK_AXES) && (isclose(fabs(dot3(n0, n1)), 1) || isclose(fabs(dot3(n0, n2)), 1) ||
+                                 isclose(fabs(dot3(n1, n2)), 1))) {
         Py_DECREF(axes_array);
         RETURN_FALLBACK;
     }
@@ -925,11 +933,11 @@ static PyObject *fast_validate_axes(PyObject *const *args, Py_ssize_t nargs, PyO
         minus[j] = -n0[j];
     }
     is_orthogonal = is_orthogonal && (allclose3(cross12, n0) || allclose3(cross12, minus));
-    if (orthogonal && !is_orthogonal) {
+    if (!SKIPPED(CHECK_AXES) && orthogonal && !is_orthogonal) {
         Py_DECREF(axes_array);
         RETURN_FALLBACK;
     }
-    if (orientation != 0) {
+    if (!SKIPPED(CHECK_AXES) && orientation != 0) {
         double dot = dot3(cross01, n2);
         if ((orientation == 1 && dot < 0) || (orientation == -1 && dot > 0)) {
             Py_DECREF(axes_array);
@@ -972,11 +980,11 @@ static PyObject *fast_validate_rotation(PyObject *const *args, Py_ssize_t nargs,
             sum += entry * entry;
         }
     }
-    if (!(sqrt(sum) < tolerance)) {
+    if (!SKIPPED(CHECK_ROTATION) && !(sqrt(sum) < tolerance)) {
         Py_DECREF(matrix);
         RETURN_FALLBACK;
     }
-    if (hand != 0) {
+    if (!SKIPPED(CHECK_ROTATION) && hand != 0) {
         double det = m[0] * (m[4] * m[8] - m[5] * m[7]) - m[1] * (m[3] * m[8] - m[5] * m[6]) +
                      m[2] * (m[3] * m[7] - m[4] * m[6]);
         if ((hand == 1 && !(det > 0)) || (hand == -1 && !(det < 0))) {

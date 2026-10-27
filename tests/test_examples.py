@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import doctest
 from pathlib import Path
 import re
@@ -10,10 +11,11 @@ import pytest
 
 import pyvista_validation
 from pyvista_validation import _cast_array
+from pyvista_validation import _config
 from pyvista_validation import check
 from pyvista_validation import validate
 
-MODULES = (pyvista_validation, check, validate, _cast_array)
+MODULES = (pyvista_validation, check, validate, _cast_array, _config)
 DOCTESTS = [
     test for module in MODULES for test in doctest.DocTestFinder().find(module) if test.examples
 ]
@@ -30,6 +32,15 @@ def run(test: doctest.DocTest) -> None:
 @pytest.mark.parametrize('test', DOCTESTS, ids=lambda test: test.name)
 def test_docstring_examples(test):
     run(test)
+
+
+@pytest.mark.parametrize('test', DOCTESTS, ids=lambda test: test.name)
+def test_docstring_examples_give_the_same_output_without_checks(test):
+    # Examples that show an error are the ones the checks exist for
+    passing = copy.copy(test)
+    passing.examples = [example for example in test.examples if example.exc_msg is None]
+    with pyvista_validation.config.override(enabled=False):
+        run(passing)
 
 
 def test_readme_examples():

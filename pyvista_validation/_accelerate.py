@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 _wrap: Callable[[Any, str, str, str], Any] | None = None
+_skip: Callable[[int], None] | None = None
+_CHECKS: tuple[str, ...] = ()
 
 
 def disabled(value: str | None, /) -> bool:
@@ -25,6 +27,8 @@ def disabled(value: str | None, /) -> bool:
 
 if not disabled(os.environ.get('PYVISTA_VALIDATION_ACCELERATE')):
     try:
+        from pyvista_validation._fast import CHECKS as _CHECKS
+        from pyvista_validation._fast import skip as _skip
         from pyvista_validation._fast import wrap as _wrap
     except ImportError:  # pragma: no cover - the extension is optional
         _wrap = None
@@ -42,6 +46,12 @@ def accelerate(namespace: dict[str, Any], names: Iterable[str]) -> None:
         reference[name] = function
         if _wrap is not None:
             namespace[name] = _wrap(function, name, text_signature(function), function.__module__)
+
+
+def skip(names: Iterable[str], /) -> None:
+    """Tell the C fast paths which checks to skip."""
+    if _skip is not None:
+        _skip(sum(1 << _CHECKS.index(name) for name in names))
 
 
 def text_signature(function: Callable[..., object]) -> str:

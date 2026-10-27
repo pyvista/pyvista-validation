@@ -18,3 +18,14 @@ Every function is importable directly from the top-level package, for example
 
    check
    validate
+
+Turning checks off
+------------------
+
+``pyvista_validation.config`` is the live :class:`Config`. Each of its switches skips
+one kind of check, and ``enabled`` skips them all.
+
+.. autosummary::
+   :toctree: _autosummary
+
+   Config

@@ -25,6 +25,37 @@
 static PyObject *FALLBACK;
 #define RETURN_FALLBACK return Py_NewRef(FALLBACK)
 
+/* The switchable checks, in the order of pyvista_validation._config.CHECKS. */
+enum {
+    CHECK_AXES,
+    CHECK_CONTAINS,
+    CHECK_FINITE,
+    CHECK_GREATER_THAN,
+    CHECK_INSTANCE,
+    CHECK_INTEGER,
+    CHECK_ITERABLE,
+    CHECK_ITERABLE_ITEMS,
+    CHECK_LENGTH,
+    CHECK_LESS_THAN,
+    CHECK_NDIM,
+    CHECK_NONNEGATIVE,
+    CHECK_NUMBER,
+    CHECK_RANGE,
+    CHECK_REAL,
+    CHECK_ROTATION,
+    CHECK_SEQUENCE,
+    CHECK_SHAPE,
+    CHECK_SORTED,
+    CHECK_STRING,
+    CHECK_SUBDTYPE,
+    CHECK_TYPE,
+    CHECK_COUNT,
+};
+
+/* One bit per check that is switched off. */
+static unsigned long long skipped;
+#define SKIPPED(check) ((skipped >> (check)) & 1ULL)
+
 /* A fast path takes the raw call: a new reference, FALLBACK, or NULL comes back. */
 typedef PyObject *(*fastpath)(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames);
 

@@ -30,6 +30,7 @@ import numpy as np
 
 from pyvista_validation._accelerate import accelerate
 from pyvista_validation._cast_array import _cast_to_numpy
+from pyvista_validation._config import enforced
 
 if sys.version_info >= (3, 13):
     from typing import TypeVar
@@ -155,6 +156,18 @@ def check_subdtype(
     array([1, 2, 3], dtype=uint8)
 
     """
+    if not enforced.subdtype:
+        return input_obj
+    _check_subdtype(input_obj, base_dtype, name)
+    return input_obj
+
+
+def _check_subdtype(
+    input_obj: _DTypeLike | _AnyArrayLikeOrScalar,
+    base_dtype: _DTypeLike | tuple[_DTypeLike, ...] | list[_DTypeLike],
+    name: str,
+) -> None:
+    """Raise unless the input's dtype is a subtype of ``base_dtype``."""
     input_dtype = _dtype_of(input_obj)
     if not isinstance(base_dtype, (tuple, list)):
         base_dtype = [base_dtype]
@@ -166,7 +179,6 @@ def check_subdtype(
         else:
             msg += f'The dtype must be a subtype of at least one of \n{base_dtype}.'
         raise TypeError(msg)
-    return input_obj
 
 
 # fmt: off
@@ -221,11 +233,13 @@ def check_real(array: _AnyArrayT, /, *, name: str = 'Array') -> _AnyArrayT:
     [1, 2, 3]
 
     """
+    if not enforced.real:
+        return array
     array_ = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
     if array_.dtype.type in (np.int32, np.int64, np.longlong, np.float32, np.float64):
         return array
     try:
-        check_subdtype(array_, (np.floating, np.integer), name=name)
+        _check_subdtype(array_, (np.floating, np.integer), name)
     except TypeError as e:
         msg = f'{name} must have real numbers.'
         raise TypeError(msg) from e
@@ -289,6 +303,8 @@ def check_sorted(
     [1, 2, 3]
 
     """
+    if not enforced.sorted:
+        return array
     array_: npt.NDArray[_AnyDType] = (
         array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
     )
@@ -374,6 +390,8 @@ def check_finite(array: _ArrayT, /, *, name: str = 'Array') -> _ArrayT:
     [1, 2, 3]
 
     """
+    if not enforced.finite:
+        return array
     array_ = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
     if not np.all(np.isfinite(array_)):
         msg = f'{name} must have finite values.'
@@ -430,9 +448,11 @@ def check_integer(
     [1.0, 2.0]
 
     """
+    if not enforced.integer:
+        return array
     array_ = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
     if strict:
-        check_subdtype(array_, np.integer, name=name)
+        _check_subdtype(array_, np.integer, name)
     elif not np.array_equal(array_, np.floor(array_)):
         msg = f'{name} must have integer-like values.'
         raise ValueError(msg)
@@ -474,7 +494,10 @@ def check_nonnegative(array: _ArrayT, /, *, name: str = 'Array') -> _ArrayT:
     [1, 2, 3]
 
     """
-    return check_greater_than(array, 0, strict=False, name=name)
+    if not enforced.nonnegative:
+        return array
+    _check_greater_than(array, 0, False, name)
+    return array
 
 
 def _validate_real_value(scalar: float | _Scalar, name: str = 'Value') -> npt.NDArray[_Scalar]:
@@ -536,6 +559,16 @@ def check_greater_than(
     [1, 2, 3]
 
     """
+    if not enforced.greater_than:
+        return array
+    _check_greater_than(array, value, strict, name)
+    return array
+
+
+def _check_greater_than(
+    array: _ArrayLikeOrScalar, value: float | _Scalar, strict: bool, name: str
+) -> None:
+    """Raise unless every element is greater than ``value``, or equal to it when not strict."""
     array_ = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
     valid_value = _validate_real_value(value)
     if strict and not np.all(array_ > valid_value):
@@ -544,7 +577,6 @@ def check_greater_than(
     if not np.all(array_ >= valid_value):
         msg = f'{name} values must all be greater than or equal to {value}.'
         raise ValueError(msg)
-    return array
 
 
 def check_less_than(
@@ -599,6 +631,16 @@ def check_less_than(
     [-1, -2, -3]
 
     """
+    if not enforced.less_than:
+        return array
+    _check_less_than(array, value, strict, name)
+    return array
+
+
+def _check_less_than(
+    array: _ArrayLikeOrScalar, value: float | _Scalar, strict: bool, name: str
+) -> None:
+    """Raise unless every element is less than ``value``, or equal to it when not strict."""
     array_ = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
     valid_value = _validate_real_value(value)
     if strict and not np.all(array_ < valid_value):
@@ -607,7 +649,6 @@ def check_less_than(
     if not np.all(array_ <= valid_value):
         msg = f'{name} values must all be less than or equal to {value}.'
         raise ValueError(msg)
-    return array
 
 
 def check_range(
@@ -669,13 +710,15 @@ def check_range(
     [0, 0.5, 1]
 
     """
+    if not enforced.range:
+        return array
     rng_ = rng if isinstance(rng, np.ndarray) else _cast_to_numpy(rng)
     check_shape(rng_, 2, name='Range')
     check_sorted(rng_, name='Range')
 
     array_ = array if isinstance(array, np.ndarray) else _cast_to_numpy(array)
-    check_greater_than(array_, rng_.item(0), strict=strict_lower, name=name)
-    check_less_than(array_, rng_.item(1), strict=strict_upper, name=name)
+    _check_greater_than(array_, rng_.item(0), strict_lower, name)
+    _check_less_than(array_, rng_.item(1), strict_upper, name)
     return array
 
 
@@ -741,6 +784,16 @@ def check_shape(
            [0., 0., 1.]])
 
     """
+    if not enforced.shape:
+        return array
+    _check_shape(array, shape, name)
+    return array
+
+
+def _check_shape(
+    array: _AnyArrayLikeOrScalar, shape: _ShapeLike | list[_ShapeLike], name: str
+) -> None:
+    """Raise unless the array has one of the allowed shapes."""
 
     def _shape_is_allowed(a: _Shape, b: _Shape) -> bool:
         # a: array's actual shape
@@ -754,7 +807,7 @@ def check_shape(
     for input_shape in shape:
         valid_shape = _validate_shape_value(input_shape)
         if _shape_is_allowed(array_shape, valid_shape):
-            return array
+            return
 
     msg = f'{name} has shape {array_shape} which is not allowed. '
     if len(shape) == 1:
@@ -834,6 +887,8 @@ def check_ndim(
     1
 
     """
+    if not enforced.ndim:
+        return array
     ndim_ = np.atleast_1d(_cast_to_numpy(ndim))
     array_ndim = _cast_to_numpy(array).ndim
     if array_ndim not in ndim_:
@@ -891,7 +946,9 @@ def check_number(num: object, /, *, name: str = 'Object') -> object:
     (1+2j)
 
     """
-    check_instance(num, numbers.Number, allow_subclass=True, name=name)
+    if not enforced.number:
+        return num
+    _check_instance(num, numbers.Number, True, name)
     return num
 
 
@@ -942,7 +999,9 @@ def check_string(obj: object, /, *, allow_subclass: bool = True, name: str = 'Ob
     'eggs'
 
     """
-    return check_instance(obj, str, allow_subclass=allow_subclass, name=name)
+    if enforced.string:
+        _check_instance(obj, str, allow_subclass, name)
+    return cast('str', obj)
 
 
 # fmt: off
@@ -989,7 +1048,9 @@ def check_sequence(obj: object, /, *, name: str = 'Object') -> Sequence[object]:
     'A'
 
     """
-    check_instance(obj, Sequence, allow_subclass=True, name=name)
+    if not enforced.sequence:
+        return cast('Sequence[object]', obj)
+    _check_instance(obj, Sequence, True, name)
     return cast('Sequence[object]', obj)
 
 
@@ -1038,7 +1099,9 @@ def check_iterable(obj: object, /, *, name: str = 'Object') -> Iterable[object]:
     array([4, 5, 6])
 
     """
-    check_instance(obj, Iterable, allow_subclass=True, name=name)
+    if not enforced.iterable:
+        return cast('Iterable[object]', obj)
+    _check_instance(obj, Iterable, True, name)
     return cast('Iterable[object]', obj)
 
 
@@ -1110,6 +1173,14 @@ def check_instance(
     'eggs'
 
     """
+    if not enforced.instance:
+        return obj
+    _check_instance(obj, classinfo, allow_subclass, name)
+    return obj
+
+
+def _check_instance(obj: object, classinfo: _ClassInfo, allow_subclass: bool, name: str) -> None:
+    """Raise unless the object is an instance of ``classinfo``, or of exactly that type."""
     if not isinstance(name, str):
         msg = f'Name must be a string, got {type(name)} instead.'  # type: ignore[unreachable]
         raise TypeError(msg)
@@ -1137,7 +1208,6 @@ def check_instance(
     if is_error:
         msg = f'{name} {msg_body} {classinfo}. Got {type(obj)} instead.'
         raise TypeError(msg)
-    return obj
 
 
 # fmt: off
@@ -1193,7 +1263,10 @@ def check_type(obj: object, /, classinfo: _ClassInfo, *, name: str = 'Object') -
     {'spam': 'eggs'}
 
     """
-    return check_instance(obj, classinfo, allow_subclass=False, name=name)
+    if not enforced.type:
+        return obj
+    _check_instance(obj, classinfo, False, name)
+    return obj
 
 
 # fmt: off
@@ -1262,9 +1335,12 @@ def check_iterable_items(
     [[1], [2], [3]]
 
     """
-    items = check_iterable(iterable_obj, name=name)
+    items = cast('Iterable[object]', iterable_obj)
+    if not enforced.iterable_items:
+        return items
+    _check_instance(iterable_obj, Iterable, True, name)
     for item in items:
-        check_instance(item, item_type, allow_subclass=allow_subclass, name=f'All items of {name}')
+        _check_instance(item, item_type, allow_subclass, f'All items of {name}')
     return items
 
 
@@ -1308,6 +1384,8 @@ def check_contains(
     'A'
 
     """
+    if not enforced.contains:
+        return must_contain
     if must_contain not in container:
         qualifier = 'one of' if isinstance(container, (list, tuple)) else 'in'
         msg = f"{name} '{must_contain}' is not valid. {name} must be {qualifier}: \n\t{container}"
@@ -1397,6 +1475,8 @@ def check_length(
     [[1, 2, 3], [4, 5, 6]]
 
     """
+    if not enforced.length:
+        return sized_input
     sized: float | _Scalar | Sized = sized_input
     if allow_scalar:
         # Reshape to 1D
@@ -1407,7 +1487,7 @@ def check_length(
             if array.ndim == 0:
                 sized = array.reshape(1)
     if must_be_1d:
-        check_shape(cast('_ArrayLikeOrScalar', sized), shape=(-1))
+        _check_shape(cast('_ArrayLikeOrScalar', sized), -1, 'Array')
     array_len = len(cast('Sized', sized))
     if exact_length is not None:
         check_integer(exact_length, name="'exact_length'")

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ._config import Config as Config
+from ._config import config as config
 from .check import check_contains as check_contains
 from .check import check_finite as check_finite
 from .check import check_greater_than as check_greater_than

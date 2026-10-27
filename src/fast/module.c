@@ -268,7 +268,22 @@ static PyObject *fast_wrap(PyObject *module, PyObject *const *args, Py_ssize_t n
     return builtin;
 }
 
+static const char *const CHECK_NAMES[CHECK_COUNT] = {"axes", "contains", "finite", "greater_than", "instance", "integer", "iterable", "iterable_items", "length", "less_than", "ndim", "nonnegative", "number", "range", "real", "rotation", "sequence", "shape", "sorted", "string", "subdtype", "type"};
+
+/* skip(mask): switch off the checks whose bits are set. */
+static PyObject *fast_skip(PyObject *module, PyObject *mask)
+{
+    unsigned long long value = PyLong_AsUnsignedLongLong(mask);
+    if (value == (unsigned long long)-1 && PyErr_Occurred()) {
+        return NULL;
+    }
+    skipped = value;
+    Py_RETURN_NONE;
+}
+
 static PyMethodDef methods[] = {
+    {"skip", (PyCFunction)fast_skip, METH_O,
+     "skip($module, mask, /)\n--\n\nSwitch off the checks whose bits are set in ``mask``."},
     {"wrap", (PyCFunction)(void (*)(void))fast_wrap, METH_FASTCALL,
      "wrap($module, function, name, text_signature, module, /)\n--\n\n"
      "Return the builtin that runs the C fast path for ``function``, or ``function`` itself."},
@@ -327,5 +342,28 @@ PyMODINIT_FUNC PyInit__fast(void)
             return NULL;
         }
     }
-    return PyModule_Create(&moduledef);
+    PyObject *module = PyModule_Create(&moduledef);
+    if (module == NULL) {
+        return NULL;
+    }
+    PyObject *checks = PyTuple_New(CHECK_COUNT);
+    if (checks == NULL) {
+        Py_DECREF(module);
+        return NULL;
+    }
+    for (int i = 0; i < CHECK_COUNT; i++) {
+        PyObject *name = PyUnicode_FromString(CHECK_NAMES[i]);
+        if (name == NULL) {
+            Py_DECREF(checks);
+            Py_DECREF(module);
+            return NULL;
+        }
+        PyTuple_SetItem(checks, i, name);
+    }
+    if (PyModule_AddObject(module, "CHECKS", checks) < 0) {
+        Py_DECREF(checks);
+        Py_DECREF(module);
+        return NULL;
+    }
+    return module;
 }

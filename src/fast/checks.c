@@ -34,6 +34,9 @@ static PyObject *fast_check_finite(PyObject *const *args, Py_ssize_t nargs, PyOb
     if (bind(&FINITE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL) {
         RETURN_FALLBACK;
     }
+    if (SKIPPED(CHECK_FINITE)) {
+        return Py_NewRef(a[0]);
+    }
     values_spec spec = {0, 1, 0, 0, 0};
     return checked(a[0], &spec);
 }
@@ -45,6 +48,9 @@ static PyObject *fast_check_nonnegative(PyObject *const *args, Py_ssize_t nargs,
     if (bind(&NONNEGATIVE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL) {
         RETURN_FALLBACK;
     }
+    if (SKIPPED(CHECK_NONNEGATIVE)) {
+        return Py_NewRef(a[0]);
+    }
     values_spec spec = {1, 0, 0, 0, 0};
     return checked(a[0], &spec);
 }
@@ -54,6 +60,9 @@ static PyObject *fast_check_integer(PyObject *const *args, Py_ssize_t nargs, PyO
     PyObject *a[3];
     if (bind(&INTEGER_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL) {
         RETURN_FALLBACK;
+    }
+    if (SKIPPED(CHECK_INTEGER)) {
+        return Py_NewRef(a[0]);
     }
     int strict = truth(a[1], 0);
     if (strict < 0) {
@@ -84,6 +93,9 @@ static PyObject *compare(const params *spec_params, int is_low, PyObject *const 
     PyObject *a[4];
     if (bind(spec_params, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL) {
         RETURN_FALLBACK;
+    }
+    if (SKIPPED(is_low ? CHECK_GREATER_THAN : CHECK_LESS_THAN)) {
+        return Py_NewRef(a[0]);
     }
     int strict = truth(a[2], 1);
     if (strict < 0) {
@@ -123,6 +135,9 @@ static PyObject *fast_check_range(PyObject *const *args, Py_ssize_t nargs, PyObj
     if (bind(&RANGE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL) {
         RETURN_FALLBACK;
     }
+    if (SKIPPED(CHECK_RANGE)) {
+        return Py_NewRef(a[0]);
+    }
     values_spec spec = {0, 0, 0, 1, 1};
     spec.strict_low = truth(a[2], 0);
     spec.strict_high = truth(a[3], 0);
@@ -138,6 +153,9 @@ static PyObject *fast_check_sorted(PyObject *const *args, Py_ssize_t nargs, PyOb
     PyObject *a[5];
     if (bind(&SORTED_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL) {
         RETURN_FALLBACK;
+    }
+    if (SKIPPED(CHECK_SORTED)) {
+        return Py_NewRef(a[0]);
     }
     int ascending = truth(a[1], 1), strict = truth(a[2], 0);
     if (ascending < 0 || strict < 0) {
@@ -176,6 +194,9 @@ static PyObject *fast_check_subdtype(PyObject *const *args, Py_ssize_t nargs, Py
     if (bind(&SUBDTYPE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL) {
         RETURN_FALLBACK;
     }
+    if (SKIPPED(CHECK_SUBDTYPE)) {
+        return Py_NewRef(a[0]);
+    }
     PyArray_Descr *descr = dtype_of(a[0]);
     if (descr == NULL) {
         RETURN_FALLBACK;
@@ -193,6 +214,9 @@ static PyObject *fast_check_real(PyObject *const *args, Py_ssize_t nargs, PyObje
     PyObject *a[2];
     if (bind(&REAL_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL) {
         RETURN_FALLBACK;
+    }
+    if (SKIPPED(CHECK_REAL)) {
+        return Py_NewRef(a[0]);
     }
     PyObject *array = any_array(a[0]);
     if (array == FALLBACK) {
@@ -212,6 +236,9 @@ static PyObject *fast_check_shape(PyObject *const *args, Py_ssize_t nargs, PyObj
     if (bind(&SHAPE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL) {
         RETURN_FALLBACK;
     }
+    if (SKIPPED(CHECK_SHAPE)) {
+        return Py_NewRef(a[0]);
+    }
     PyObject *array = any_array(a[0]);
     if (array == FALLBACK) {
         return array;
@@ -230,6 +257,9 @@ static PyObject *fast_check_ndim(PyObject *const *args, Py_ssize_t nargs, PyObje
     if (bind(&NDIM_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL) {
         RETURN_FALLBACK;
     }
+    if (SKIPPED(CHECK_NDIM)) {
+        return Py_NewRef(a[0]);
+    }
     PyObject *array = any_array(a[0]);
     if (array == FALLBACK) {
         return array;
@@ -247,6 +277,9 @@ static PyObject *fast_check_length(PyObject *const *args, Py_ssize_t nargs, PyOb
     PyObject *a[7];
     if (bind(&LENGTH_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL) {
         RETURN_FALLBACK;
+    }
+    if (SKIPPED(CHECK_LENGTH)) {
+        return Py_NewRef(a[0]);
     }
     int must_be_1d = truth(a[4], 0), allow_scalar = truth(a[5], 0);
     if (must_be_1d < 0 || allow_scalar < 0) {
@@ -364,7 +397,13 @@ static int instance_of(PyObject *obj, PyObject *classinfo, int allow_subclass)
 static PyObject *fast_check_number(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *a[2];
-    if (bind(&NUMBER_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || !name_ok(a[1])) {
+    if (bind(&NUMBER_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL) {
+        RETURN_FALLBACK;
+    }
+    if (SKIPPED(CHECK_NUMBER)) {
+        return Py_NewRef(a[0]);
+    }
+    if (!name_ok(a[1])) {
         RETURN_FALLBACK;
     }
     PyObject *num = a[0];
@@ -378,7 +417,13 @@ static PyObject *fast_check_number(PyObject *const *args, Py_ssize_t nargs, PyOb
 static PyObject *fast_check_string(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *a[3];
-    if (bind(&STRING_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || !name_ok(a[2])) {
+    if (bind(&STRING_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL) {
+        RETURN_FALLBACK;
+    }
+    if (SKIPPED(CHECK_STRING)) {
+        return Py_NewRef(a[0]);
+    }
+    if (!name_ok(a[2])) {
         RETURN_FALLBACK;
     }
     int allow_subclass = truth(a[1], 1);
@@ -395,7 +440,13 @@ static PyObject *fast_check_string(PyObject *const *args, Py_ssize_t nargs, PyOb
 static PyObject *fast_check_sequence(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *a[2];
-    if (bind(&SEQUENCE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || !name_ok(a[1])) {
+    if (bind(&SEQUENCE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL) {
+        RETURN_FALLBACK;
+    }
+    if (SKIPPED(CHECK_SEQUENCE)) {
+        return Py_NewRef(a[0]);
+    }
+    if (!name_ok(a[1])) {
         RETURN_FALLBACK;
     }
     PyObject *obj = a[0];
@@ -417,7 +468,13 @@ static int reiterable(PyObject *obj)
 static PyObject *fast_check_iterable(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *a[2];
-    if (bind(&ITERABLE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || !name_ok(a[1])) {
+    if (bind(&ITERABLE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL) {
+        RETURN_FALLBACK;
+    }
+    if (SKIPPED(CHECK_ITERABLE)) {
+        return Py_NewRef(a[0]);
+    }
+    if (!name_ok(a[1])) {
         RETURN_FALLBACK;
     }
     if (!reiterable(a[0]) && instance_of(a[0], cache.abc_Iterable, 1) != 1) {
@@ -429,8 +486,13 @@ static PyObject *fast_check_iterable(PyObject *const *args, Py_ssize_t nargs, Py
 static PyObject *fast_check_instance(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *a[4];
-    if (bind(&INSTANCE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL ||
-        !name_ok(a[3])) {
+    if (bind(&INSTANCE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL) {
+        RETURN_FALLBACK;
+    }
+    if (SKIPPED(CHECK_INSTANCE)) {
+        return Py_NewRef(a[0]);
+    }
+    if (!name_ok(a[3])) {
         RETURN_FALLBACK;
     }
     int allow_subclass = truth(a[2], 1);
@@ -447,8 +509,13 @@ static PyObject *fast_check_instance(PyObject *const *args, Py_ssize_t nargs, Py
 static PyObject *fast_check_type(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)
 {
     PyObject *a[3];
-    if (bind(&TYPE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL ||
-        !name_ok(a[2])) {
+    if (bind(&TYPE_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL) {
+        RETURN_FALLBACK;
+    }
+    if (SKIPPED(CHECK_TYPE)) {
+        return Py_NewRef(a[0]);
+    }
+    if (!name_ok(a[2])) {
         RETURN_FALLBACK;
     }
     if (instance_of(a[0], a[1], 0) != 1) {
@@ -461,8 +528,13 @@ static PyObject *fast_check_iterable_items(PyObject *const *args, Py_ssize_t nar
                                            PyObject *kwnames)
 {
     PyObject *a[4];
-    if (bind(&ITEMS_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL ||
-        !name_ok(a[3])) {
+    if (bind(&ITEMS_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL) {
+        RETURN_FALLBACK;
+    }
+    if (SKIPPED(CHECK_ITERABLE_ITEMS)) {
+        return Py_NewRef(a[0]);
+    }
+    if (!name_ok(a[3])) {
         RETURN_FALLBACK;
     }
     int allow_subclass = truth(a[2], 1);
@@ -516,6 +588,9 @@ static PyObject *fast_check_contains(PyObject *const *args, Py_ssize_t nargs, Py
     PyObject *a[3];
     if (bind(&CONTAINS_PARAMS, args, nargs, kwnames, a) < 0 || a[0] == NULL || a[1] == NULL) {
         RETURN_FALLBACK;
+    }
+    if (SKIPPED(CHECK_CONTAINS)) {
+        return Py_NewRef(a[1]);
     }
     int found = PySequence_Contains(a[0], a[1]);
     if (found != 1) {

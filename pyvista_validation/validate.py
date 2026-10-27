@@ -30,6 +30,7 @@ from pyvista_validation._accelerate import accelerate
 from pyvista_validation._cast_array import _cast_to_numpy
 from pyvista_validation._cast_array import _cast_to_tuple
 from pyvista_validation._cast_array import _tolist
+from pyvista_validation._config import enforced
 from pyvista_validation.check import check_contains
 from pyvista_validation.check import check_finite
 from pyvista_validation.check import check_integer
@@ -919,7 +920,11 @@ def validate_axes(
             first, second, _ = vectors
             third = np.cross(first, second)
             # Two parallel vectors have no third axis; zero vectors are reported below
-            if np.isclose(third, 0).all() and not np.isclose(vectors[:2], 0).all(axis=1).any():
+            if (
+                enforced.axes
+                and np.isclose(third, 0).all()
+                and not np.isclose(vectors[:2], 0).all(axis=1).any()
+            ):
                 msg = f'{name} cannot be parallel.'
                 raise ValueError(msg)
             if must_have_orientation == 'right':
@@ -931,7 +936,7 @@ def validate_axes(
 
     # The checks below are done in floating point; the input dtype is kept for the output
     matrix = axes_array.astype(np.float64, copy=False).reshape((3, 3))
-    if np.isclose(matrix, 0).all(axis=1).any():
+    if enforced.axes and np.isclose(matrix, 0).all(axis=1).any():
         msg = f'{name} cannot be zeros.'
         raise ValueError(msg)
 
@@ -941,15 +946,19 @@ def validate_axes(
     norm0, norm1, norm2 = axes_norm
     # Parallel and antiparallel unit vectors have a dot product of magnitude one
     pairs = ((norm0, norm1), (norm0, norm2), (norm1, norm2))
-    if any(np.isclose(abs(first @ second), 1) for first, second in pairs):
+    if enforced.axes and any(np.isclose(abs(first @ second), 1) for first, second in pairs):
         msg = f'{name} cannot be parallel.'
         raise ValueError(msg)
     cross_0_1 = np.cross(norm0, norm1)
     cross_1_2 = np.cross(norm1, norm2)
 
-    if must_be_orthogonal and not (
-        (np.allclose(cross_0_1, norm2) or np.allclose(cross_0_1, -norm2))
-        and (np.allclose(cross_1_2, norm0) or np.allclose(cross_1_2, -norm0))
+    if (
+        enforced.axes
+        and must_be_orthogonal
+        and not (
+            (np.allclose(cross_0_1, norm2) or np.allclose(cross_0_1, -norm2))
+            and (np.allclose(cross_1_2, norm0) or np.allclose(cross_1_2, -norm0))
+        )
     ):
         msg = f'{name} are not orthogonal.'
         raise ValueError(msg)
@@ -958,7 +967,7 @@ def validate_axes(
     # Note: this check is skipped for two vectors since the third axis is
     # computed from the first two, and this check is only relevant for the
     # non-orthogonal case
-    if must_have_orientation:
+    if enforced.axes and must_have_orientation:
         dot = cross_0_1 @ norm2
         if must_have_orientation == 'right' and dot < 0:
             msg = f'{name} do not have a right-handed orientation.'
@@ -1045,6 +1054,8 @@ def validate_rotation(
         ['right', 'left', None], must_contain=must_have_handedness, name='must_have_handedness'
     )
     rotation_matrix = validate_transform3x3(rotation, name=name)
+    if not enforced.rotation:
+        return rotation_matrix
     # The checks below are done in floating point; the input dtype is kept for the output
     matrix = rotation_matrix.astype(np.float64, copy=False).reshape((3, 3))
     norm_diff = np.linalg.norm(matrix @ matrix.T - np.eye(3), ord='fro')

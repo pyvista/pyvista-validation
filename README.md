@@ -134,6 +134,31 @@ Pass `name=` to any function to control how the input is described in that messa
 | A transformation matrix | `validate_transform4x4` |
 | A rotation matrix | `validate_rotation` |
 
+## Turning checks off
+
+`config` has one switch per kind of check, named after it, and `enabled` for all of them.
+A check that is switched off returns its input unchanged, both in its `check` function and
+in the `validate` options that use it. Casts and reshapes still run, so valid input gives
+the same output.
+
+```python
+>>> from pyvista_validation import check_sorted
+>>> from pyvista_validation import config
+
+>>> config.sorted = False
+>>> check_sorted([3, 1, 2])
+[3, 1, 2]
+>>> config.sorted = True
+
+>>> with config.override(enabled=False):
+...     validate_array([-1, 2], must_be_nonnegative=True)
+array([-1,  2])
+```
+
+`axes` and `rotation` switch off the geometric checks of `validate_axes` and
+`validate_rotation`. Set `PYVISTA_VALIDATION_CHECKS=false` in the environment to start
+with `config.enabled` set to `False`.
+
 ## API reference
 
 ### `validate` functions
