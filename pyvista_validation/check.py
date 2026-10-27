@@ -39,9 +39,9 @@ else:
 
 if TYPE_CHECKING:
     from typing import Literal
+    from typing import Never
 
     import numpy.typing as npt
-    from typing_extensions import Never
     from typing_extensions import TypeIs
 
     from pyvista_validation._typing import VectorLikeFloat

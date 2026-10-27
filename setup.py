@@ -34,7 +34,7 @@ else:
                 include_dirs=[np.get_include()],
                 define_macros=[
                     # One wheel per platform serves every supported Python.
-                    ('Py_LIMITED_API', '0x030A0000'),
+                    ('Py_LIMITED_API', '0x030B0000'),
                     ('NPY_NO_DEPRECATED_API', 'NPY_2_0_API_VERSION'),
                     # Built against NumPy 2, loadable on every NumPy the package supports.
                     ('NPY_TARGET_VERSION', 'NPY_1_21_API_VERSION'),
@@ -47,5 +47,5 @@ else:
                 optional=True,
             )
         ],
-        options={'bdist_wheel': {'py_limited_api': 'cp310'}},
+        options={'bdist_wheel': {'py_limited_api': 'cp311'}},
     )
